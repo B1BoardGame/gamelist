@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>B1 보드게임카페 보유게임 리스트</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+
+    body {
+      font-family: sans-serif;
+      padding: 1em;
+      background: var(--background);
+      color: var(--text);
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      table-layout: fixed;
+      min-width: 600px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      th {
+        background-color: #333; /* 또는 #2a2a2a 등 더 어두운 값 */
+        color: #fff; /* 텍스트 색상도 조정 */
+      }
+    }
+
+    tr:nth-child(even) td {
+      background-color: rgba(0, 0, 0, 0.03);
+    }
+
+    .sort-btn {
+      margin-left: 5px;
+      font-size: 0.8em;
+      padding: 2px 5px;
+      cursor: pointer;
+    }
+
+    .sort-order {
+      font-size: 0.7em;
+      margin-left: 4px;
+      color: gray;
+    }
+
+    .filter-input {
+      width: 90%;
+      font-size: 0.8em;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 768px) {
+      th, td {
+        font-size: 0.85em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>B1 보드게임카페 보유게임 리스트</h1>
+  <div class="table-container">
+    <table id="sheet-table"></table>
+  </div>
+
+  <script>
+    const sheetId = '1F9Ho9alBcuP1_PoJletmulKCJqPCVm8SLTq61_uWJMM';
+    const gid = '0';
+    const difficultyColumnIndex = 3;
+
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=${gid}`;
+    let originalData = [];
+    let tableData = [];
+    let headers = [];
+    let sortState = [];
+    let filterValues = [];
+
+    fetch(url)
+      .then(res => res.text())
+      .then(text => {
+        const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\((.+)\)/)[1]);
+        const rows = json.table.rows;
+        const cols = json.table.cols;
+        const columnCount = cols.length - 1;
+
+        headers = cols.slice(0, columnCount).map(col => col.label);
+        originalData = rows.map(row =>
+          row.c.slice(0, columnCount).map(cell => cell?.v?.toString().replace(/\r?\n/g, '\n') || '-')
+        );
+
+        filterValues = new Array(headers.length).fill('');
+        tableData = [...originalData];
+
+        renderTable();
+      });
+
+    function renderTable() {
+      const table = document.getElementById('sheet-table');
+      table.innerHTML = '';
+
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+
+      headers.forEach((title, idx) => {
+        const th = document.createElement('th');
+
+        const headerDiv = document.createElement('div');
+        headerDiv.style.display = 'flex';
+        headerDiv.style.alignItems = 'center';
+        headerDiv.style.justifyContent = 'space-between';
+
+        const text = document.createElement('span');
+        text.textContent = title;
+
+        const sortBtn = document.createElement('button');
+        sortBtn.textContent = getSortSymbol(idx);
+        sortBtn.className = 'sort-btn';
+        sortBtn.addEventListener('click', () => {
+          updateSort(idx);
+          applyFilter();
+          applySort();
+          renderTable();
+        });
+
+        const order = document.createElement('span');
+        const sortIndex = sortState.findIndex(s => s.index === idx);
+        if (sortIndex !== -1) {
+          order.className = 'sort-order';
+          order.textContent = `${sortIndex + 1}`;
+        }
+
+        headerDiv.appendChild(text);
+        headerDiv.appendChild(sortBtn);
+        headerDiv.appendChild(order);
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'filter-input';
+        input.value = filterValues[idx];
+        input.placeholder = '검색';
+
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') {
+            filterValues[idx] = input.value;
+            applyFilter();
+            applySort();
+            renderTable();
+          }
+        });
+
+        input.addEventListener('blur', () => {
+          filterValues[idx] = input.value;
+          applyFilter();
+          applySort();
+          renderTable();
+        });
+
+        th.appendChild(headerDiv);
+        th.appendChild(input);
+        headerRow.appendChild(th);
+      });
+
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+
+      tableData.forEach(row => {
+        const tr = document.createElement('tr');
+        const difficulty = parseFloat(row[difficultyColumnIndex]);
+
+        if (!isNaN(difficulty)) {
+          tr.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
+        }
+
+        row.forEach(cell => {
+          const td = document.createElement('td');
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+    }
+
+    function updateSort(index) {
+      const existing = sortState.find(s => s.index === index);
+      if (!existing) {
+        sortState.unshift({ index, direction: 'asc' });
+      } else {
+        existing.direction = existing.direction === 'asc' ? 'desc' : 'asc';
+        sortState = [existing, ...sortState.filter(s => s.index !== index)];
+      }
+    }
+
+    function getSortSymbol(index) {
+      const state = sortState.find(s => s.index === index);
+      if (!state) return '↕'; // 기본 상태
+      return state.direction === 'asc' ? '▲' : '▼';
+    }
+
+    function applySort() {
+      tableData.sort((a, b) => {
+        for (const { index, direction } of sortState) {
+          const valA = a[index];
+          const valB = b[index];
+          if (valA === valB) continue;
+
+          const aNum = parseFloat(valA);
+          const bNum = parseFloat(valB);
+          const isNumeric = !isNaN(aNum) && !isNaN(bNum);
+
+          if (isNumeric) {
+            return direction === 'asc' ? aNum - bNum : bNum - aNum;
+          } else {
+            return direction === 'asc'
+              ? valA.localeCompare(valB)
+              : valB.localeCompare(valA);
+          }
+        }
+        return 0;
+      });
+    }
+
+    function applyFilter() {
+      tableData = originalData.filter(row =>
+        filterValues.every((val, i) =>
+          row[i].toLowerCase().includes(val.toLowerCase())
+        )
+      );
+    }
+
+    function hslColorFromDifficulty(value, isDark) {
+      const min = 1.0, max = 5.0;
+      const t = (value - min) / (max - min);
+      const hStart = 190, hEnd = 0;
+      const l = isDark ? 25 : 60;
+      const h = hStart + (hEnd - hStart) * t;
+      return `hsl(${h.toFixed(2)}, 100%, ${l}%)`;
+    }
+  </script>
+</body>
+</html>
