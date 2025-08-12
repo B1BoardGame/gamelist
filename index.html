@@ -343,7 +343,7 @@
         // 공백을 \s+로 매칭하도록 처리(키 내 공백이 유동적일 때도 매칭)
         const pattern = escapeRegex(key).replace(/ /g, '\\s+');
         const regex = new RegExp(pattern, 'gi');
-        result = result.replace(regex, val);
+        result = result.replace(regex, val + '<br>'); // 줄바꿈 추가
       }
 
       return result;
