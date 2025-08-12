@@ -44,8 +44,8 @@
 
     @media (prefers-color-scheme: dark) {
       th {
-        background-color: #333; /* 또는 #2a2a2a 등 더 어두운 값 */
-        color: #fff; /* 텍스트 색상도 조정 */
+        background-color: #333;
+        color: #fff;
       }
     }
 
@@ -73,6 +73,9 @@
     }
 
     @media (max-width: 768px) {
+      table {
+        min-width: unset;
+      }
       th, td {
         font-size: 0.85em;
       }
@@ -116,7 +119,7 @@
         renderTable();
       });
 
-    // 🔹 치환 함수 추가 (대소문자 구분 없이)
+    // 🔹 치환 함수 (대소문자 구분 없이)
     function replaceSpecialTerms(text) {
       let result = text;
       result = result.replace(/contracts/gi, "[계약 달성]");
@@ -129,92 +132,135 @@
       table.innerHTML = '';
 
       const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const thead = document.createElement('thead');
-      const headerRow = document.createElement('tr');
+      const isMobile = window.innerWidth < 768;
 
-      headers.forEach((title, idx) => {
-        const th = document.createElement('th');
+      if (!isMobile) {
+        // 🔹 데스크톱 버전 (기존 표 렌더링)
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
 
-        const headerDiv = document.createElement('div');
-        headerDiv.style.display = 'flex';
-        headerDiv.style.alignItems = 'center';
-        headerDiv.style.justifyContent = 'space-between';
+        headers.forEach((title, idx) => {
+          const th = document.createElement('th');
 
-        const text = document.createElement('span');
-        text.textContent = title;
+          const headerDiv = document.createElement('div');
+          headerDiv.style.display = 'flex';
+          headerDiv.style.alignItems = 'center';
+          headerDiv.style.justifyContent = 'space-between';
 
-        const sortBtn = document.createElement('button');
-        sortBtn.textContent = getSortSymbol(idx);
-        sortBtn.className = 'sort-btn';
-        sortBtn.addEventListener('click', () => {
-          updateSort(idx);
-          applyFilter();
-          applySort();
-          renderTable();
-        });
+          const text = document.createElement('span');
+          text.textContent = title;
 
-        const order = document.createElement('span');
-        const sortIndex = sortState.findIndex(s => s.index === idx);
-        if (sortIndex !== -1) {
-          order.className = 'sort-order';
-          order.textContent = `${sortIndex + 1}`;
-        }
+          const sortBtn = document.createElement('button');
+          sortBtn.textContent = getSortSymbol(idx);
+          sortBtn.className = 'sort-btn';
+          sortBtn.addEventListener('click', () => {
+            updateSort(idx);
+            applyFilter();
+            applySort();
+            renderTable();
+          });
 
-        headerDiv.appendChild(text);
-        headerDiv.appendChild(sortBtn);
-        headerDiv.appendChild(order);
+          const order = document.createElement('span');
+          const sortIndex = sortState.findIndex(s => s.index === idx);
+          if (sortIndex !== -1) {
+            order.className = 'sort-order';
+            order.textContent = `${sortIndex + 1}`;
+          }
 
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'filter-input';
-        input.value = filterValues[idx];
-        input.placeholder = '검색';
+          headerDiv.appendChild(text);
+          headerDiv.appendChild(sortBtn);
+          headerDiv.appendChild(order);
 
-        input.addEventListener('keydown', e => {
-          if (e.key === 'Enter') {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'filter-input';
+          input.value = filterValues[idx];
+          input.placeholder = '검색';
+
+          input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+              filterValues[idx] = input.value;
+              applyFilter();
+              applySort();
+              renderTable();
+            }
+          });
+
+          input.addEventListener('blur', () => {
             filterValues[idx] = input.value;
             applyFilter();
             applySort();
             renderTable();
+          });
+
+          th.appendChild(headerDiv);
+          th.appendChild(input);
+          headerRow.appendChild(th);
+        });
+
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+
+        tableData.forEach(row => {
+          const tr = document.createElement('tr');
+          const difficulty = parseFloat(row[difficultyColumnIndex]);
+          if (!isNaN(difficulty)) {
+            tr.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
+          }
+
+          row.forEach(cell => {
+            const td = document.createElement('td');
+            td.textContent = replaceSpecialTerms(cell);
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+      } else {
+        // 🔹 모바일 버전 (2열 구조)
+        const tbody = document.createElement('tbody');
+
+        const displayHeaders = headers.slice(0, headers.length - 1); // 마지막 열 제외
+        const colCount = displayHeaders.length;
+
+        tableData.forEach(row => {
+          const displayRow = row.slice(0, row.length - 1);
+          const difficulty = parseFloat(row[difficultyColumnIndex]);
+
+          for (let i = 0; i < displayRow.length; i += 2) {
+            const tr = document.createElement('tr');
+            if (!isNaN(difficulty)) {
+              tr.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
+            }
+
+            if (colCount % 2 !== 0 && i >= colCount - 1) {
+              // 🔹 마지막 하나 남은 열 → colspan=2
+              const td = document.createElement('td');
+              td.colSpan = 2;
+              td.textContent = replaceSpecialTerms(displayRow[i]);
+              tr.appendChild(td);
+            } else {
+              // 일반 2열
+              const td1 = document.createElement('td');
+              td1.textContent = replaceSpecialTerms(displayRow[i]);
+              tr.appendChild(td1);
+
+              if (i + 1 < displayRow.length) {
+                const td2 = document.createElement('td');
+                td2.textContent = replaceSpecialTerms(displayRow[i + 1]);
+                tr.appendChild(td2);
+              }
+            }
+            tbody.appendChild(tr);
           }
         });
 
-        input.addEventListener('blur', () => {
-          filterValues[idx] = input.value;
-          applyFilter();
-          applySort();
-          renderTable();
-        });
-
-        th.appendChild(headerDiv);
-        th.appendChild(input);
-        headerRow.appendChild(th);
-      });
-
-      thead.appendChild(headerRow);
-      table.appendChild(thead);
-
-      const tbody = document.createElement('tbody');
-
-      tableData.forEach(row => {
-        const tr = document.createElement('tr');
-        const difficulty = parseFloat(row[difficultyColumnIndex]);
-
-        if (!isNaN(difficulty)) {
-          tr.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
-        }
-
-        row.forEach(cell => {
-          const td = document.createElement('td');
-          // 🔹 치환 함수 적용
-          td.textContent = replaceSpecialTerms(cell);
-          tr.appendChild(td);
-        });
-
-        tbody.appendChild(tr);
-      });
-
-      table.appendChild(tbody);
+        table.appendChild(tbody);
+      }
     }
 
     function updateSort(index) {
@@ -229,7 +275,7 @@
 
     function getSortSymbol(index) {
       const state = sortState.find(s => s.index === index);
-      if (!state) return '↕'; // 기본 상태
+      if (!state) return '↕';
       return state.direction === 'asc' ? '▲' : '▼';
     }
 
@@ -272,6 +318,9 @@
       const h = hStart + (hEnd - hStart) * t;
       return `hsl(${h.toFixed(2)}, 100%, ${l}%)`;
     }
+
+    // 화면 리사이즈 시 다시 렌더링
+    window.addEventListener('resize', () => renderTable());
   </script>
 </body>
 </html>
