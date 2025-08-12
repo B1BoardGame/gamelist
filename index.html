@@ -44,8 +44,8 @@
 
     @media (prefers-color-scheme: dark) {
       th {
-        background-color: #333;
-        color: #fff;
+        background-color: #333; /* 또는 #2a2a2a 등 더 어두운 값 */
+        color: #fff; /* 텍스트 색상도 조정 */
       }
     }
 
@@ -78,6 +78,17 @@
       }
       th, td {
         font-size: 0.85em;
+      }
+      /* 모바일에서 한 그리드 칸 안에 stacked header controls 정렬 보조 */
+      .header-control {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .header-top-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
       }
     }
   </style>
@@ -127,6 +138,67 @@
       return result;
     }
 
+    // 모바일용: 하나의 th 안에 특정 인덱스의 header 컨트롤(레이블+정렬+필터)을 생성
+    function createHeaderControl(index) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'header-control';
+
+      // 상단(텍스트 + 정렬 버튼 + 순서)
+      const headerDiv = document.createElement('div');
+      headerDiv.className = 'header-top-row';
+
+      const text = document.createElement('span');
+      text.textContent = headers[index] || '';
+
+      const sortBtn = document.createElement('button');
+      sortBtn.textContent = getSortSymbol(index);
+      sortBtn.className = 'sort-btn';
+      sortBtn.addEventListener('click', () => {
+        updateSort(index);
+        applyFilter();
+        applySort();
+        renderTable();
+      });
+
+      const order = document.createElement('span');
+      const sortIndex = sortState.findIndex(s => s.index === index);
+      if (sortIndex !== -1) {
+        order.className = 'sort-order';
+        order.textContent = `${sortIndex + 1}`;
+      }
+
+      headerDiv.appendChild(text);
+      headerDiv.appendChild(sortBtn);
+      headerDiv.appendChild(order);
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'filter-input';
+      input.value = filterValues[index] || '';
+      input.placeholder = '검색';
+
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          filterValues[index] = input.value;
+          applyFilter();
+          applySort();
+          renderTable();
+        }
+      });
+
+      input.addEventListener('blur', () => {
+        filterValues[index] = input.value;
+        applyFilter();
+        applySort();
+        renderTable();
+      });
+
+      wrapper.appendChild(headerDiv);
+      wrapper.appendChild(input);
+
+      return wrapper;
+    }
+
     function renderTable() {
       const table = document.getElementById('sheet-table');
       table.innerHTML = '';
@@ -135,7 +207,9 @@
       const isMobile = window.innerWidth < 768;
 
       if (!isMobile) {
-        // 🔹 데스크톱 버전 (기존 표 렌더링)
+        // ---------------------------
+        // 데스크톱: 기존 구현과 동일
+        // ---------------------------
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
 
@@ -206,6 +280,7 @@
         tableData.forEach(row => {
           const tr = document.createElement('tr');
           const difficulty = parseFloat(row[difficultyColumnIndex]);
+
           if (!isNaN(difficulty)) {
             tr.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
           }
@@ -220,43 +295,78 @@
         });
 
         table.appendChild(tbody);
+
       } else {
-        // 🔹 모바일 버전 (2열 구조)
+        // ---------------------------
+        // 모바일: 각 아이템을 2행으로 나누어 출력
+        // - gridCols = Math.ceil(n / 2)
+        // - 각 그리드 칸은 (top, bottom) 쌍을 가지거나,
+        //   홀수일 때 마지막 칸은 rowspan=2 로 남은 마지막 열을 표시
+        // ---------------------------
+        const n = headers.length; // 이미 마지막 열(출력 제외 대상)은 제거되어 있음
+        const gridCols = Math.ceil(n / 2);
+
+        // 헤더(모바일용): gridCols 개의 th, 각 th 안에 top/bottom header control 을 쌓음
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+
+        for (let j = 0; j < gridCols; j++) {
+          const th = document.createElement('th');
+
+          const topIdx = j * 2;
+          const bottomIdx = j * 2 + 1;
+
+          if (topIdx < n) {
+            th.appendChild(createHeaderControl(topIdx));
+          }
+          if (bottomIdx < n) {
+            th.appendChild(createHeaderControl(bottomIdx));
+          }
+          headerRow.appendChild(th);
+        }
+
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
         const tbody = document.createElement('tbody');
 
-        const displayHeaders = headers.slice(0, headers.length - 1); // 마지막 열 제외
-        const colCount = displayHeaders.length;
-
+        // 각 데이터 행을 두 개의 <tr>으로 나누어 렌더링
         tableData.forEach(row => {
-          const displayRow = row.slice(0, row.length - 1);
+          const trTop = document.createElement('tr');
+          const trBottom = document.createElement('tr');
           const difficulty = parseFloat(row[difficultyColumnIndex]);
-
-          for (let i = 0; i < displayRow.length; i += 2) {
-            const tr = document.createElement('tr');
-            if (!isNaN(difficulty)) {
-              tr.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
-            }
-
-            if (colCount % 2 !== 0 && i >= colCount - 1) {
-              // 🔹 마지막 하나 남은 열 → colspan=2
-              const td = document.createElement('td');
-              td.colSpan = 2;
-              td.textContent = replaceSpecialTerms(displayRow[i]);
-              tr.appendChild(td);
-            } else {
-              // 일반 2열
-              const td1 = document.createElement('td');
-              td1.textContent = replaceSpecialTerms(displayRow[i]);
-              tr.appendChild(td1);
-
-              if (i + 1 < displayRow.length) {
-                const td2 = document.createElement('td');
-                td2.textContent = replaceSpecialTerms(displayRow[i + 1]);
-                tr.appendChild(td2);
-              }
-            }
-            tbody.appendChild(tr);
+          if (!isNaN(difficulty)) {
+            trTop.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
+            trBottom.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
           }
+
+          for (let j = 0; j < gridCols; j++) {
+            const topIdx = j * 2;
+            const bottomIdx = j * 2 + 1;
+
+            if (topIdx < n && bottomIdx < n) {
+              // 일반 케이스: top / bottom 각각 채움
+              const tdTop = document.createElement('td');
+              tdTop.textContent = replaceSpecialTerms(row[topIdx]);
+              trTop.appendChild(tdTop);
+
+              const tdBottom = document.createElement('td');
+              tdBottom.textContent = replaceSpecialTerms(row[bottomIdx]);
+              trBottom.appendChild(tdBottom);
+            } else if (topIdx < n && bottomIdx >= n) {
+              // 남은 마지막 하나: rowspan=2 로 top 행에 넣기
+              const td = document.createElement('td');
+              td.rowSpan = 2;
+              td.textContent = replaceSpecialTerms(row[topIdx]);
+              trTop.appendChild(td);
+              // trBottom에는 해당 칸 추가하지 않음 (rowspan 이 담당)
+            } else {
+              // topIdx >= n: 아무것도 추가할 필요 없음 (이론상 발생하지 않음)
+            }
+          }
+
+          tbody.appendChild(trTop);
+          tbody.appendChild(trBottom);
         });
 
         table.appendChild(tbody);
@@ -275,7 +385,7 @@
 
     function getSortSymbol(index) {
       const state = sortState.find(s => s.index === index);
-      if (!state) return '↕';
+      if (!state) return '↕'; // 기본 상태
       return state.direction === 'asc' ? '▲' : '▼';
     }
 
