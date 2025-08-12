@@ -116,8 +116,10 @@
         const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\((.+)\)/)[1]);
         const rows = json.table.rows;
         const cols = json.table.cols;
+        // 원본 스프레드시트의 마지막 열(=cols.length-1)은 제외하도록 columnCount를 설정한 기존 로직 유지
         const columnCount = cols.length - 1;
 
+        // headers 및 originalData는 이미 마지막 스프레드시트 열을 제외한 상태로 채워짐
         headers = cols.slice(0, columnCount).map(col => col.label);
         originalData = rows.map(row =>
           row.c.slice(0, columnCount).map(cell => cell?.v?.toString().replace(/\r?\n/g, '\n') || '-')
@@ -129,9 +131,10 @@
         renderTable();
       });
 
-    // 마지막 열 전용 치환 함수 (전체 변환표 포함, 앞뒤 공백 제거)
+    // --- 마지막으로 출력되는(=headers 기준 마지막) 열에만 적용할 치환 함수 (전체 변환표 포함) ---
     function replaceSpecialTermsForLastColumn(text) {
       if (text === null || text === undefined) return text;
+      // 앞뒤 불필요한 공백 제거, 내부 연속 공백 하나로 축소
       let result = String(text).trim().replace(/\s+/g, ' ');
 
       const replacements = {
@@ -175,7 +178,7 @@
         "Communication Limits": "[제한된 커뮤니케이션]",
         "Connections": "[연결]",
         "Constrained Bidding": "[제한 입찰]",
-        "Contracts": "[계약]",
+        "Contracts": "[계약 달성]",
         "Cooperative Game": "[협력]",
         "Crayon Rail System": "[크레용 레일 시스템]",
         "Critical Hits and Failures": "[크리티컬 공격 또는 실패]",
@@ -281,7 +284,7 @@
         "Secret Unit Deployment": "[비밀 유닛 배치]",
         "Selection Order Bid": "[선택 주문 입찰]",
         "Semi-Cooperative Game": "[반 협력]",
-        "Set Collection": "[셋 콜렉션]",
+        "Set Collection": "[셋 컬렉션]",
         "Simulation": "[시뮬레이션]",
         "Simultaneous Action Selection": "[동시 액션 선택]",
         "Singing": "[노래부르기]",
@@ -328,6 +331,7 @@
         "Zone of Control": "[지역 컨트롤]"
       };
 
+      // 긴 키부터 치환하도록 정렬 (부분 매칭 방지)
       const keysSorted = Object.keys(replacements).sort((a, b) => b.length - a.length);
 
       function escapeRegex(str) {
@@ -336,7 +340,8 @@
 
       for (const key of keysSorted) {
         const val = replacements[key];
-        const pattern = escapeRegex(key).replace(/\\ /g, '\\s+').replace(/ /g, '\\s+');
+        // 공백을 \s+로 매칭하도록 처리(키 내 공백이 유동적일 때도 매칭)
+        const pattern = escapeRegex(key).replace(/ /g, '\\s+');
         const regex = new RegExp(pattern, 'gi');
         result = result.replace(regex, val);
       }
@@ -344,13 +349,17 @@
       return result;
     }
 
+    // 모바일 헤더용 컨트롤 생성 (기존 로직 유지)
     function createHeaderControl(index) {
       const wrapper = document.createElement('div');
       wrapper.className = 'header-control';
+
       const headerDiv = document.createElement('div');
       headerDiv.className = 'header-top-row';
+
       const text = document.createElement('span');
       text.textContent = headers[index] || '';
+
       const sortBtn = document.createElement('button');
       sortBtn.textContent = getSortSymbol(index);
       sortBtn.className = 'sort-btn';
@@ -360,20 +369,24 @@
         applySort();
         renderTable();
       });
+
       const order = document.createElement('span');
       const sortIndex = sortState.findIndex(s => s.index === index);
       if (sortIndex !== -1) {
         order.className = 'sort-order';
         order.textContent = `${sortIndex + 1}`;
       }
+
       headerDiv.appendChild(text);
       headerDiv.appendChild(sortBtn);
       headerDiv.appendChild(order);
+
       const input = document.createElement('input');
       input.type = 'text';
       input.className = 'filter-input';
       input.value = filterValues[index] || '';
       input.placeholder = '검색';
+
       input.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
           filterValues[index] = input.value;
@@ -382,34 +395,50 @@
           renderTable();
         }
       });
+
       input.addEventListener('blur', () => {
         filterValues[index] = input.value;
         applyFilter();
         applySort();
         renderTable();
       });
+
       wrapper.appendChild(headerDiv);
       wrapper.appendChild(input);
       return wrapper;
     }
 
+    // --- 테이블 렌더링 (데스크톱은 기존과 동일, 모바일은 2행 레이아웃) ---
     function renderTable() {
       const table = document.getElementById('sheet-table');
       table.innerHTML = '';
+
       const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       const isMobile = window.innerWidth < 768;
 
+      // headers와 originalData는 fetch시 이미 "스프레드시트의 마지막 열을 제외"한 상태로 들어오므로
+      // displayCount는 headers.length (출력할 실제 열 수)로 사용
+      const displayCount = headers.length; // 이 값이 출력되는 마지막 열의 인덱스는 displayCount - 1
+
       if (!isMobile) {
+        // ---------------------------
+        // 데스크톱: 기존 표 렌더링 (헤더/필터/정렬 모두 동일)
+        // ---------------------------
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
-        headers.forEach((title, idx) => {
+
+        // 헤더는 displayCount 기준으로 생성 (headers 배열 길이가 이미 displayCount)
+        for (let idx = 0; idx < displayCount; idx++) {
           const th = document.createElement('th');
+
           const headerDiv = document.createElement('div');
           headerDiv.style.display = 'flex';
           headerDiv.style.alignItems = 'center';
           headerDiv.style.justifyContent = 'space-between';
+
           const text = document.createElement('span');
-          text.textContent = title;
+          text.textContent = headers[idx] || '';
+
           const sortBtn = document.createElement('button');
           sortBtn.textContent = getSortSymbol(idx);
           sortBtn.className = 'sort-btn';
@@ -419,20 +448,24 @@
             applySort();
             renderTable();
           });
+
           const order = document.createElement('span');
           const sortIndex = sortState.findIndex(s => s.index === idx);
           if (sortIndex !== -1) {
             order.className = 'sort-order';
             order.textContent = `${sortIndex + 1}`;
           }
+
           headerDiv.appendChild(text);
           headerDiv.appendChild(sortBtn);
           headerDiv.appendChild(order);
+
           const input = document.createElement('input');
           input.type = 'text';
           input.className = 'filter-input';
-          input.value = filterValues[idx];
+          input.value = filterValues[idx] || '';
           input.placeholder = '검색';
+
           input.addEventListener('keydown', e => {
             if (e.key === 'Enter') {
               filterValues[idx] = input.value;
@@ -441,59 +474,81 @@
               renderTable();
             }
           });
+
           input.addEventListener('blur', () => {
             filterValues[idx] = input.value;
             applyFilter();
             applySort();
             renderTable();
           });
+
           th.appendChild(headerDiv);
           th.appendChild(input);
           headerRow.appendChild(th);
-        });
+        }
+
         thead.appendChild(headerRow);
         table.appendChild(thead);
 
         const tbody = document.createElement('tbody');
+
+        // 각 데이터 행은 originalData의 요소로, 컬럼 수는 displayCount와 일치해야 함
         tableData.forEach(row => {
           const tr = document.createElement('tr');
           const difficulty = parseFloat(row[difficultyColumnIndex]);
           if (!isNaN(difficulty)) {
             tr.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
           }
-          row.forEach((cell, idx) => {
+
+          // 안전하게 0..displayCount-1 까지 읽음
+          for (let idx = 0; idx < displayCount; idx++) {
             const td = document.createElement('td');
-            if (idx === row.length - 1) {
-              td.textContent = replaceSpecialTermsForLastColumn(cell);
+            const cellValue = row[idx];
+            // 출력되는 마지막 열(=displayCount-1)에만 치환 적용
+            if (idx === displayCount - 1) {
+              td.textContent = replaceSpecialTermsForLastColumn(cellValue);
             } else {
-              td.textContent = cell;
+              td.textContent = cellValue;
             }
             tr.appendChild(td);
-          });
+          }
+
           tbody.appendChild(tr);
         });
+
         table.appendChild(tbody);
       } else {
-        const n = headers.length;
+        // ---------------------------
+        // 모바일: 각 아이템(한 행)을 2행으로 나누어 렌더링
+        // - gridCols = Math.ceil(displayCount / 2)
+        // - 마지막 표시되는 컬럼(=displayCount-1)에만 치환 적용
+        // ---------------------------
+        const n = displayCount;
         const gridCols = Math.ceil(n / 2);
 
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
+
         for (let j = 0; j < gridCols; j++) {
           const th = document.createElement('th');
           const topIdx = j * 2;
           const bottomIdx = j * 2 + 1;
+
           if (topIdx < n) th.appendChild(createHeaderControl(topIdx));
           if (bottomIdx < n) th.appendChild(createHeaderControl(bottomIdx));
+
           headerRow.appendChild(th);
         }
+
         thead.appendChild(headerRow);
         table.appendChild(thead);
 
         const tbody = document.createElement('tbody');
+
         tableData.forEach(row => {
           const trTop = document.createElement('tr');
           const trBottom = document.createElement('tr');
+
           const difficulty = parseFloat(row[difficultyColumnIndex]);
           if (!isNaN(difficulty)) {
             trTop.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
@@ -505,25 +560,32 @@
             const bottomIdx = j * 2 + 1;
 
             if (topIdx < n && bottomIdx < n) {
+              // 일반: top/bottom 둘 다 존재
               const tdTop = document.createElement('td');
-              tdTop.textContent = topIdx === n - 1
-                ? replaceSpecialTermsForLastColumn(row[topIdx])
-                : row[topIdx];
-              trTop.appendChild(tdTop);
-
               const tdBottom = document.createElement('td');
-              tdBottom.textContent = bottomIdx === n - 1
-                ? replaceSpecialTermsForLastColumn(row[bottomIdx])
-                : row[bottomIdx];
-              trBottom.appendChild(tdBottom);
 
+              const topVal = row[topIdx];
+              const bottomVal = row[bottomIdx];
+
+              tdTop.textContent = (topIdx === n - 1)
+                ? replaceSpecialTermsForLastColumn(topVal)
+                : topVal;
+              tdBottom.textContent = (bottomIdx === n - 1)
+                ? replaceSpecialTermsForLastColumn(bottomVal)
+                : bottomVal;
+
+              trTop.appendChild(tdTop);
+              trBottom.appendChild(tdBottom);
             } else if (topIdx < n && bottomIdx >= n) {
+              // 마지막 하나 남음 -> rowspan=2 로 합쳐서 표시
               const td = document.createElement('td');
               td.rowSpan = 2;
-              td.textContent = topIdx === n - 1
-                ? replaceSpecialTermsForLastColumn(row[topIdx])
-                : row[topIdx];
+              const topVal = row[topIdx];
+              td.textContent = (topIdx === n - 1)
+                ? replaceSpecialTermsForLastColumn(topVal)
+                : topVal;
               trTop.appendChild(td);
+              // trBottom에는 해당 칸 추가하지 않음
             }
           }
 
@@ -535,6 +597,7 @@
       }
     }
 
+    // 이하 기존 정렬/필터/색상 로직은 변경하지 않음
     function updateSort(index) {
       const existing = sortState.find(s => s.index === index);
       if (!existing) {
