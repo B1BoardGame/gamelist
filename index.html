@@ -146,7 +146,8 @@
         "Action Retrieval": "[액션 회수]",
         "Action Timer": "[액션 타이머]",
         "Advantage Token": "[어드밴티지 토큰]",
-        "Alliances Area Majority / Influence": "[지역 주위 / 영향력]",
+        "Alliances": "[동맹]",
+        "Area Majority / Influence": "[지역 주위 / 영향력]",
         "Area Movement": "[지역 이동]",
         "Area-Impulse": "[지역 턴]",
         "Auction / Bidding": "[입찰 경매]",
@@ -343,7 +344,7 @@
         // 공백을 \s+로 매칭하도록 처리(키 내 공백이 유동적일 때도 매칭)
         const pattern = escapeRegex(key).replace(/ /g, '\\s+');
         const regex = new RegExp(pattern, 'gi');
-        result = result.replace(regex, val + '<br>'); // 줄바꿈 추가
+        result = result.replace(regex, val + '\n'); // 줄바꿈 추가
       }
 
       return result;
