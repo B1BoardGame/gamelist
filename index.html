@@ -116,6 +116,14 @@
         renderTable();
       });
 
+    // 🔹 치환 함수 추가 (대소문자 구분 없이)
+    function replaceSpecialTerms(text) {
+      let result = text;
+      result = result.replace(/contracts/gi, "[계약 달성]");
+      result = result.replace(/set collection/gi, "[셋 컬렉션]");
+      return result;
+    }
+
     function renderTable() {
       const table = document.getElementById('sheet-table');
       table.innerHTML = '';
@@ -198,7 +206,8 @@
 
         row.forEach(cell => {
           const td = document.createElement('td');
-          td.textContent = cell;
+          // 🔹 치환 함수 적용
+          td.textContent = replaceSpecialTerms(cell);
           tr.appendChild(td);
         });
 
