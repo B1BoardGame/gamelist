@@ -133,8 +133,6 @@
     function replaceSpecialTermsForLastColumn(text) {
       if (!text) return text;
       let result = text.trim();
-      // 기존 규칙 포함
-      result = replaceSpecialTerms(result);
       // 대규모 변환표 (일부 발췌 예시, 전체 리스트는 필요 시 그대로 확장 가능)
       const replacements = {
         "Acting": "[연기]",
@@ -495,19 +493,19 @@
               const tdTop = document.createElement('td');
               tdTop.textContent = topIdx === n - 1
                 ? replaceSpecialTermsForLastColumn(row[topIdx])
-                : replaceSpecialTerms(row[topIdx]);
+                : row[topIdx];
               trTop.appendChild(tdTop);
               const tdBottom = document.createElement('td');
               tdBottom.textContent = bottomIdx === n - 1
                 ? replaceSpecialTermsForLastColumn(row[bottomIdx])
-                : replaceSpecialTerms(row[bottomIdx]);
+                : row[bottomIdx];
               trBottom.appendChild(tdBottom);
             } else if (topIdx < n && bottomIdx >= n) {
               const td = document.createElement('td');
               td.rowSpan = 2;
               td.textContent = topIdx === n - 1
                 ? replaceSpecialTermsForLastColumn(row[topIdx])
-                : replaceSpecialTerms(row[topIdx]);
+                : row[topIdx];
               trTop.appendChild(td);
             }
           }
