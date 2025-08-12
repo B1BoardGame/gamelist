@@ -44,8 +44,8 @@
 
     @media (prefers-color-scheme: dark) {
       th {
-        background-color: #333; /* 또는 #2a2a2a 등 더 어두운 값 */
-        color: #fff; /* 텍스트 색상도 조정 */
+        background-color: #333;
+        color: #fff;
       }
     }
 
@@ -79,7 +79,6 @@
       th, td {
         font-size: 0.85em;
       }
-      /* 모바일에서 한 그리드 칸 안에 stacked header controls 정렬 보조 */
       .header-control {
         display: flex;
         flex-direction: column;
@@ -94,7 +93,7 @@
   </style>
 </head>
 <body>
-  <h1>B1 보드게임카페 보유게임 리스트</h1>
+  <h1>보유게임 리스트</h1>
   <div class="table-container">
     <table id="sheet-table"></table>
   </div>
@@ -130,26 +129,220 @@
         renderTable();
       });
 
-    // 🔹 치환 함수 (대소문자 구분 없이)
-    function replaceSpecialTerms(text) {
-      let result = text;
-      result = result.replace(/contracts/gi, "[계약 달성]");
-      result = result.replace(/set collection/gi, "[셋 컬렉션]");
+    // 마지막 열 전용 치환 함수
+    function replaceSpecialTermsForLastColumn(text) {
+      if (!text) return text;
+      let result = text.trim();
+      // 기존 규칙 포함
+      result = replaceSpecialTerms(result);
+      // 대규모 변환표 (일부 발췌 예시, 전체 리스트는 필요 시 그대로 확장 가능)
+      const replacements = {
+        "Acting": "[연기]",
+        "Action / Event": "[액션 / 이벤트]",
+        "Action Drafting": "[액션 드래프팅]",
+        "Action Points": "[액션 포인트]",
+        "Action Queue": "[액션 큐]",
+        "Action Retrieval": "[액션 회수]",
+        "Action Timer": "[액션 타이머]",
+        "Advantage Token": "[어드밴티지 토큰]",
+        "Alliances Area Majority / Influence": "[지역 주위 / 영향력]",
+        "Area Movement": "[지역 이동]",
+        "Area-Impulse": "[지역 턴]",
+        "Auction / Bidding": "[입찰 경매]",
+        "Auction Compensation": "[경매 보상]",
+        "Auction: Dexterity": "[민첩한 경매]",
+        "Auction: Dutch": "[네덜란드식 경매]",
+        "Auction: Dutch Priority": "[네덜란드 우선 경매]",
+        "Auction: English": "[미국식 경매]",
+        "Auction: Fixed Placement": "[고정 배치 경매]",
+        "Auction: Multiple Lot": "[동시 입찰 경매]",
+        "Auction: Once Around": "[한바퀴 경매]",
+        "Auction: Sealed Bid": "[비밀 경매]",
+        "Auction: Turn Order Until Pass": "[턴제 무한 경매]",
+        "Automatic Resource Growth": "[자원 성장]",
+        "Betting and Bluffing": "[베팅과 블러핑]",
+        "Bias": "[편향]",
+        "Bids As Wagers": "[입찰 베팅]",
+        "Bingo": "[빙고]",
+        "Bribery": "[뇌물]",
+        "Campaign / Battle Card Driven": "[캠페인/ 배틀카드 중심]",
+        "Card Play Conflict Resolution": "[카드 플레이로 충돌 해결]",
+        "Catch the Leader": "[리더잡기]",
+        "Chaining": "[체이닝]",
+        "Chit-Pull System": "[치트풀 시스템]",
+        "Closed Drafting": "[드래프팅]",
+        "Closed Economy Auction": "[폐쇄 경제형 경매]",
+        "Command Cards": "[명령 카드]",
+        "Commodity Speculation": "[상품 투기]",
+        "Communication Limits": "[제한된 커뮤니케이션]",
+        "Connections": "[연결]",
+        "Constrained Bidding": "[제한 입찰]",
+        "Contracts": "[계약]",
+        "Cooperative Game": "[협력]",
+        "Crayon Rail System": "[크레용 레일 시스템]",
+        "Critical Hits and Failures": "[크리티컬 공격 또는 실패]",
+        "Cube Tower": "[큐브 타워]",
+        "Deck Construction": "[덱 건설]",
+        "Deck, Bag, and Pool Building": "[덱/백/풀 빌딩]",
+        "Deduction": "[소거법 추리]",
+        "Delayed Purchase": "[지연 구매]",
+        "Dice Rolling": "[주사위 굴림]",
+        "Die Icon Resolution": "[주사위 그림]",
+        "Different Dice Movement": "[다양한 주사위 이동]",
+        "Drawing": "[그리기]",
+        "Elapsed Real Time Ending": "[실제 시간 기반의 게임 종료]",
+        "Enclosure": "둘러싸기",
+        "End Game Bonuses": "[엔드 게임 보너스]",
+        "Events": "[이벤트]",
+        "Finale Ending": "[피날레 엔딩]",
+        "Flicking": "[플리킹]",
+        "Follow": "[따라하기]",
+        "Force Commitment": "[강제 적용]",
+        "Grid Coverage": "[그리드 범위]",
+        "Grid Movement": "[그리드 이동]",
+        "Hand Management": "[핸드 관리]",
+        "Hexagon Grid": "[육각 그리드]",
+        "Hidden Movement": "[비밀 이동]",
+        "Hidden Roles": "[숨겨진 역할]",
+        "Hidden Victory Points": "[숨겨진 승점]",
+        "Highest-Lowest Scoring": "[최고-최저 점수]",
+        "Hot Potato": "[뜨거운 감자]",
+        "I Cut, You Choose": "[내가 자르고, 네가 선택]",
+        "Impulse Movement": "[세부 움직임]",
+        "Income": "[수입]",
+        "Increase Value of Unchosen Resources": "[선택되지 않은 자원의 가치 증가]",
+        "Induction": "[규칙 찾기]",
+        "Interrupts": "[방해]",
+        "Investment": "[투자]",
+        "Kill Steal": "[킬 스틸]",
+        "King of the Hill": "[언덕의 왕]",
+        "Ladder Climbing": "[사다리타기]",
+        "Layering": "[레이어링]",
+        "Legacy Game": "[레거시]",
+        "Line Drawing": "[선 그리기]",
+        "Line of Sight": "[시야 선]",
+        "Loans": "[대출]",
+        "Lose a Turn": "[턴 잃기]",
+        "Mancala": "[만칼라]",
+        "Map Addition": "[추가되는 맵]",
+        "Map Deformation": "[지도 변형]",
+        "Map Reduction": "[맵 축소]",
+        "Market": "[시장]",
+        "Matching": "[매칭]",
+        "Measurement Movement": "[이동 측정]",
+        "Melding and Splaying": "[멜딩과 스플레잉]",
+        "Memory": "[기억]",
+        "Minimap Resolution": "[미니맵]",
+        "Modular Board": "[모듈러 보드]",
+        "Move Through Deck": "[덱 소진]",
+        "Movement Points": "[이동 포인트]",
+        "Movement Template": "[이동 템플릿]",
+        "Moving Multiple Units": "[여러 유닛 이동]",
+        "Multi-Use Cards": "[다용도 카드]",
+        "Multiple Maps": "[여러 지도]",
+        "Narrative Choice / Paragraph": "[서사 선택]",
+        "Negotiation": "[협상]",
+        "Neighbor Scope": "[이웃의 범위]",
+        "Network and Route Building": "[네트워크 및 경로 구축]",
+        "Once-Per-Game Abilities": "[1회용 능력]",
+        "Open Drafting": "[오픈 드래프팅]",
+        "Order Counters": "[주문 카운터]",
+        "Ordering": "[주문]",
+        "Ownership": "[소유권]",
+        "Paper-and-Pencil": "[종이와 연필]",
+        "Passed Action Token": "[액션 토큰 전달]",
+        "Pattern Building": "[패턴 구현]",
+        "Pattern Movement": "[패턴 이동]",
+        "Pattern Recognition": "[패턴 인식]",
+        "Physical Removal": "[물리적 제거]",
+        "Pick-up and Deliver": "[픽업과 배달]",
+        "Pieces as Map": "[지도로 사용하는 조각]",
+        "Player Elimination": "[플레이어 제거]",
+        "Player Judge": "[플레이어 심판]",
+        "Point to Point Movement": "[점 간 이동]",
+        "Predictive Bid": "[예측 입찰]",
+        "Prisoner's Dilemma": "[죄수의 딜레마]",
+        "Programmed Movement": "[프로그램된 이동]",
+        "Push Your Luck": "[운에 기대기]",
+        "Questions and Answers": "[질문과 답변]",
+        "Race": "[레이싱]",
+        "Random Production": "[무작위 생산]",
+        "Ratio / Combat Results Table": "[비율/전투 결과 표]",
+        "Re-rolling and Locking": "[재굴림과 잠금]",
+        "Real-Time": "실시간",
+        "Relative Movement": "[상대적 이동]",
+        "Resource Queue": "[자원 대기열]",
+        "Resource to Move": "[연료 자원]",
+        "Rock-Paper-Scissors": "[가위 바위 보]",
+        "Role Playing": "[롤 플레이]",
+        "Roles with Asymmetric Information": "[비대칭 정보가 있는 역할]",
+        "Roll / Spin and Move": "[롤/스핀 이동]",
+        "Rondel": "[론델]",
+        "Scenario / Mission / Campaign Game": "[시나리오/미션/캠페인]",
+        "Score-and-Reset Game": "[점수기록 및 재시작]",
+        "Secret Unit Deployment": "[비밀 유닛 배치]",
+        "Selection Order Bid": "[선택 주문 입찰]",
+        "Semi-Cooperative Game": "[반 협력]",
+        "Set Collection": "[셋 콜렉션]",
+        "Simulation": "[시뮬레이션]",
+        "Simultaneous Action Selection": "[동시 액션 선택]",
+        "Singing": "[노래부르기]",
+        "Single Loser Game": "[꼴등찾기]",
+        "Slide / Push": "[밀기]",
+        "Solo / Solitaire Game": "[싱글 플레이]",
+        "Speed Matching": "[속도 매칭]",
+        "Spelling": "[철자]",
+        "Square Grid": "[정사각 그리드]",
+        "Stacking and Balancing": "[쌓기와 밸런싱]",
+        "Stat Check Resolution": "[상태 확인]",
+        "Static Capture": "[정적 캡쳐]",
+        "Stock Holding": "[주식 보유]",
+        "Storytelling": "[스토리텔링]",
+        "Sudden Death Ending": "[서든 데스 엔딩]",
+        "Tags": "[태그]",
+        "Take That": "[이거나 먹어]",
+        "Targeted Clues": "[타겟 단서]",
+        "Team-Based Game": "[팀 기반]",
+        "Tech Trees / Tech Tracks": "[테크트리]",
+        "Three Dimensional Movement": "[3차원 이동]",
+        "Tile Placement": "[타일 놓기]",
+        "Track Movement": "[트랙 이동]",
+        "Trading": "[거래]",
+        "Traitor Game": "[배신자]",
+        "Trick-taking": "[트릭 테이킹]",
+        "Tug of War": "[줄다리기]",
+        "Turn Order: Auction": "[턴 순서:  경매]",
+        "Turn Order: Claim Action": "[턴 순서: 액션 수행]",
+        "Turn Order: Pass Order": "[턴 순서: 패스 순서]",
+        "Turn Order: Progressive": "[턴 순서: 진행순서]",
+        "Turn Order: Random": "[턴 순서: 무작위]",
+        "Turn Order: Role Order": "[턴 순서: 역할에 따라]",
+        "Turn Order: Stat-Based": "[턴 순서: 능력에 따라]",
+        "Turn Order: Time Track": "[턴 순서 : 시간에 따라]",
+        "Variable Phase Order": "[가변 페이즈 순서]",
+        "Variable Player Powers": "[가변 플레이어 파워]",
+        "Variable Set-up": "[변형된 게임준비]",
+        "Victory Points as a Resource": "[승점을 자원으로]",
+        "Voting": "[투표]",
+        "Worker Placement": "[일꾼놓기]",
+        "Worker Placement with Dice Workers": "[일꾼놓기: 주사위로]",
+        "Worker Placement, Different Worker Types": "[일꾼놓기: 각기 다른 종류]",
+        "Zone of Control": "[지역 컨트롤]"
+      };
+      for (const [key, value] of Object.entries(replacements)) {
+        const regex = new RegExp(key, 'gi');
+        result = result.replace(regex, value);
+      }
       return result;
     }
 
-    // 모바일용: 하나의 th 안에 특정 인덱스의 header 컨트롤(레이블+정렬+필터)을 생성
     function createHeaderControl(index) {
       const wrapper = document.createElement('div');
       wrapper.className = 'header-control';
-
-      // 상단(텍스트 + 정렬 버튼 + 순서)
       const headerDiv = document.createElement('div');
       headerDiv.className = 'header-top-row';
-
       const text = document.createElement('span');
       text.textContent = headers[index] || '';
-
       const sortBtn = document.createElement('button');
       sortBtn.textContent = getSortSymbol(index);
       sortBtn.className = 'sort-btn';
@@ -159,24 +352,20 @@
         applySort();
         renderTable();
       });
-
       const order = document.createElement('span');
       const sortIndex = sortState.findIndex(s => s.index === index);
       if (sortIndex !== -1) {
         order.className = 'sort-order';
         order.textContent = `${sortIndex + 1}`;
       }
-
       headerDiv.appendChild(text);
       headerDiv.appendChild(sortBtn);
       headerDiv.appendChild(order);
-
       const input = document.createElement('input');
       input.type = 'text';
       input.className = 'filter-input';
       input.value = filterValues[index] || '';
       input.placeholder = '검색';
-
       input.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
           filterValues[index] = input.value;
@@ -185,45 +374,34 @@
           renderTable();
         }
       });
-
       input.addEventListener('blur', () => {
         filterValues[index] = input.value;
         applyFilter();
         applySort();
         renderTable();
       });
-
       wrapper.appendChild(headerDiv);
       wrapper.appendChild(input);
-
       return wrapper;
     }
 
     function renderTable() {
       const table = document.getElementById('sheet-table');
       table.innerHTML = '';
-
       const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       const isMobile = window.innerWidth < 768;
 
       if (!isMobile) {
-        // ---------------------------
-        // 데스크톱: 기존 구현과 동일
-        // ---------------------------
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
-
         headers.forEach((title, idx) => {
           const th = document.createElement('th');
-
           const headerDiv = document.createElement('div');
           headerDiv.style.display = 'flex';
           headerDiv.style.alignItems = 'center';
           headerDiv.style.justifyContent = 'space-between';
-
           const text = document.createElement('span');
           text.textContent = title;
-
           const sortBtn = document.createElement('button');
           sortBtn.textContent = getSortSymbol(idx);
           sortBtn.className = 'sort-btn';
@@ -233,24 +411,20 @@
             applySort();
             renderTable();
           });
-
           const order = document.createElement('span');
           const sortIndex = sortState.findIndex(s => s.index === idx);
           if (sortIndex !== -1) {
             order.className = 'sort-order';
             order.textContent = `${sortIndex + 1}`;
           }
-
           headerDiv.appendChild(text);
           headerDiv.appendChild(sortBtn);
           headerDiv.appendChild(order);
-
           const input = document.createElement('input');
           input.type = 'text';
           input.className = 'filter-input';
           input.value = filterValues[idx];
           input.placeholder = '검색';
-
           input.addEventListener('keydown', e => {
             if (e.key === 'Enter') {
               filterValues[idx] = input.value;
@@ -259,78 +433,53 @@
               renderTable();
             }
           });
-
           input.addEventListener('blur', () => {
             filterValues[idx] = input.value;
             applyFilter();
             applySort();
             renderTable();
           });
-
           th.appendChild(headerDiv);
           th.appendChild(input);
           headerRow.appendChild(th);
         });
-
         thead.appendChild(headerRow);
         table.appendChild(thead);
-
         const tbody = document.createElement('tbody');
-
         tableData.forEach(row => {
           const tr = document.createElement('tr');
           const difficulty = parseFloat(row[difficultyColumnIndex]);
-
           if (!isNaN(difficulty)) {
             tr.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
           }
-
-          row.forEach(cell => {
+          row.forEach((cell, idx) => {
             const td = document.createElement('td');
-            td.textContent = replaceSpecialTerms(cell);
+            if (idx === row.length - 1) {
+              td.textContent = replaceSpecialTermsForLastColumn(cell);
+            } else {
+              td.textContent = cell;
+            }
             tr.appendChild(td);
           });
-
           tbody.appendChild(tr);
         });
-
         table.appendChild(tbody);
-
       } else {
-        // ---------------------------
-        // 모바일: 각 아이템을 2행으로 나누어 출력
-        // - gridCols = Math.ceil(n / 2)
-        // - 각 그리드 칸은 (top, bottom) 쌍을 가지거나,
-        //   홀수일 때 마지막 칸은 rowspan=2 로 남은 마지막 열을 표시
-        // ---------------------------
-        const n = headers.length; // 이미 마지막 열(출력 제외 대상)은 제거되어 있음
+        const n = headers.length;
         const gridCols = Math.ceil(n / 2);
-
-        // 헤더(모바일용): gridCols 개의 th, 각 th 안에 top/bottom header control 을 쌓음
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
-
         for (let j = 0; j < gridCols; j++) {
           const th = document.createElement('th');
-
           const topIdx = j * 2;
           const bottomIdx = j * 2 + 1;
-
-          if (topIdx < n) {
-            th.appendChild(createHeaderControl(topIdx));
-          }
-          if (bottomIdx < n) {
-            th.appendChild(createHeaderControl(bottomIdx));
-          }
+          if (topIdx < n) th.appendChild(createHeaderControl(topIdx));
+          if (bottomIdx < n) th.appendChild(createHeaderControl(bottomIdx));
           headerRow.appendChild(th);
         }
-
         thead.appendChild(headerRow);
         table.appendChild(thead);
-
         const tbody = document.createElement('tbody');
-
-        // 각 데이터 행을 두 개의 <tr>으로 나누어 렌더링
         tableData.forEach(row => {
           const trTop = document.createElement('tr');
           const trBottom = document.createElement('tr');
@@ -339,36 +488,32 @@
             trTop.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
             trBottom.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
           }
-
           for (let j = 0; j < gridCols; j++) {
             const topIdx = j * 2;
             const bottomIdx = j * 2 + 1;
-
             if (topIdx < n && bottomIdx < n) {
-              // 일반 케이스: top / bottom 각각 채움
               const tdTop = document.createElement('td');
-              tdTop.textContent = replaceSpecialTerms(row[topIdx]);
+              tdTop.textContent = topIdx === n - 1
+                ? replaceSpecialTermsForLastColumn(row[topIdx])
+                : replaceSpecialTerms(row[topIdx]);
               trTop.appendChild(tdTop);
-
               const tdBottom = document.createElement('td');
-              tdBottom.textContent = replaceSpecialTerms(row[bottomIdx]);
+              tdBottom.textContent = bottomIdx === n - 1
+                ? replaceSpecialTermsForLastColumn(row[bottomIdx])
+                : replaceSpecialTerms(row[bottomIdx]);
               trBottom.appendChild(tdBottom);
             } else if (topIdx < n && bottomIdx >= n) {
-              // 남은 마지막 하나: rowspan=2 로 top 행에 넣기
               const td = document.createElement('td');
               td.rowSpan = 2;
-              td.textContent = replaceSpecialTerms(row[topIdx]);
+              td.textContent = topIdx === n - 1
+                ? replaceSpecialTermsForLastColumn(row[topIdx])
+                : replaceSpecialTerms(row[topIdx]);
               trTop.appendChild(td);
-              // trBottom에는 해당 칸 추가하지 않음 (rowspan 이 담당)
-            } else {
-              // topIdx >= n: 아무것도 추가할 필요 없음 (이론상 발생하지 않음)
             }
           }
-
           tbody.appendChild(trTop);
           tbody.appendChild(trBottom);
         });
-
         table.appendChild(tbody);
       }
     }
@@ -382,24 +527,20 @@
         sortState = [existing, ...sortState.filter(s => s.index !== index)];
       }
     }
-
     function getSortSymbol(index) {
       const state = sortState.find(s => s.index === index);
-      if (!state) return '↕'; // 기본 상태
+      if (!state) return '↕';
       return state.direction === 'asc' ? '▲' : '▼';
     }
-
     function applySort() {
       tableData.sort((a, b) => {
         for (const { index, direction } of sortState) {
           const valA = a[index];
           const valB = b[index];
           if (valA === valB) continue;
-
           const aNum = parseFloat(valA);
           const bNum = parseFloat(valB);
           const isNumeric = !isNaN(aNum) && !isNaN(bNum);
-
           if (isNumeric) {
             return direction === 'asc' ? aNum - bNum : bNum - aNum;
           } else {
@@ -411,7 +552,6 @@
         return 0;
       });
     }
-
     function applyFilter() {
       tableData = originalData.filter(row =>
         filterValues.every((val, i) =>
@@ -419,7 +559,6 @@
         )
       );
     }
-
     function hslColorFromDifficulty(value, isDark) {
       const min = 1.0, max = 5.0;
       const t = (value - min) / (max - min);
@@ -428,8 +567,6 @@
       const h = hStart + (hEnd - hStart) * t;
       return `hsl(${h.toFixed(2)}, 100%, ${l}%)`;
     }
-
-    // 화면 리사이즈 시 다시 렌더링
     window.addEventListener('resize', () => renderTable());
   </script>
 </body>
