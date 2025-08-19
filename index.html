@@ -124,51 +124,50 @@
     let filterValues = [];
     let replacements = {}; // ✅ 치환 매핑 저장용
 
-    // 두 번째 시트에서 치환 데이터 먼저 불러오기
-    fetch(replacementsUrl)
-      .then(res => res.text())
-      .then(text => {
-        const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\((.+)\)/)[1]);
-        const rows = json.table.rows;
-        replacements = {};
-        rows.forEach(row => {
-          if (row.c[0] && row.c[1]) {
-            const key = row.c[0].v.toString().trim();
-            const val = row.c[1].v.toString().trim();
-            replacements[key] = val;
-          }
-        });
+    // ✅ 치환 테이블과 원본 데이터를 함께 불러오고, 둘 다 준비된 뒤에만 렌더링
+    Promise.all([
+      fetch(replacementsUrl).then(res => res.text()),
+      fetch(url).then(res => res.text())
+    ]).then(([repText, dataText]) => {
+      // 치환 테이블 파싱
+      const repJson = JSON.parse(repText.match(/google\.visualization\.Query\.setResponse\((.+)\)/)[1]);
+      const repRows = repJson.table.rows;
+      replacements = {};
+      repRows.forEach(row => {
+        if (row.c && row.c[0] && row.c[1]) {
+          const key = row.c[0].v?.toString().replace(/\r?\n/g, '\n').trim();
+          const val = row.c[1].v?.toString().replace(/\r?\n/g, '\n').trim();
+          if (key) replacements[key] = val ?? '';
+        }
       });
 
-    // 원본 데이터 불러오기
-    fetch(url)
-      .then(res => res.text())
-      .then(text => {
-        const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\((.+)\)/)[1]);
-        const rows = json.table.rows;
-        const cols = json.table.cols;
-        // 원본 스프레드시트의 마지막 열(=cols.length-1)은 제외하도록 columnCount를 설정한 기존 로직 유지
-        const columnCount = cols.length - 1;
+      // 원본 데이터 파싱
+      const json = JSON.parse(dataText.match(/google\.visualization\.Query\.setResponse\((.+)\)/)[1]);
+      const rows = json.table.rows;
+      const cols = json.table.cols;
+      // 원본 스프레드시트의 마지막 열(=cols.length-1)은 제외하도록 columnCount를 설정한 기존 로직 유지
+      const columnCount = cols.length - 1;
 
-        // headers 및 originalData는 이미 마지막 스프레드시트 열을 제외한 상태로 채워짐
-        headers = cols.slice(0, columnCount).map(col => col.label);
-        originalData = rows.map(row =>
-          row.c.slice(0, columnCount).map(cell => cell?.v?.toString().replace(/\r?\n/g, '\n') || '-')
-        );
+      // headers 및 originalData는 이미 마지막 스프레드시트 열을 제외한 상태로 채워짐
+      headers = cols.slice(0, columnCount).map(col => col.label);
+      originalData = rows.map(row =>
+        row.c.slice(0, columnCount).map(cell => cell?.v?.toString().replace(/\r?\n/g, '\n') || '-')
+      );
 
-        filterValues = new Array(headers.length).fill('');
-        tableData = [...originalData];
+      filterValues = new Array(headers.length).fill('');
+      tableData = [...originalData];
 
-        renderTable();
-      });
+      renderTable();
+    });
 
     // --- 마지막으로 출력되는(=headers 기준 마지막) 열에만 적용할 치환 함수 ---
     function replaceSpecialTermsForLastColumn(text) {
       if (text === null || text === undefined) return text;
-      // 앞뒤 불필요한 공백 제거, 내부 연속 공백 하나로 축소
-      let result = String(text).trim().replace(/\s+/g, ' ');
 
-      // replacements 매핑 적용
+      // 개행 정규화만 수행(공백 압축 X) — 줄 단위 입력을 유지
+      let result = String(text).replace(/\r?\n/g, '\n');
+
+      // 부분 치환 방지를 위해 긴 키부터 치환
       const keysSorted = Object.keys(replacements).sort((a, b) => b.length - a.length);
 
       function escapeRegex(str) {
@@ -176,14 +175,18 @@
       }
 
       for (const key of keysSorted) {
-        const val = replacements[key];
+        const val = (replacements[key] ?? '').toString().replace(/\r?\n/g, '\n');
+        // 키 내부의 공백은 유연 매칭(한 개 이상 공백)으로 치환
         const pattern = escapeRegex(key).replace(/ /g, '\\s+');
         const regex = new RegExp(pattern, 'gi');
-        result = result.replace(regex, val + '\n'); // 줄바꿈 추가
+        result = result.replace(regex, val);
       }
 
-      // 줄바꿈 이후 공백 제거
-      result = result.replace(/\n\s+/g, '\n');
+      // 줄바꿈 뒤 공백 제거, 각 줄 끝 공백 제거
+      result = result
+        .replace(/\n[ \t]+/g, '\n')  // 줄바꿈 뒤 공백 제거
+        .replace(/[ \t]+$/gm, '')    // 각 줄 말미 공백 제거
+        .trim();
 
       return result;
     }
@@ -260,9 +263,13 @@
       const displayCount = headers.length; // 이 값이 출력되는 마지막 열의 인덱스는 displayCount - 1
 
       if (!isMobile) {
+        // ---------------------------
+        // 데스크톱: 기존 표 렌더링 (헤더/필터/정렬 모두 동일)
+        // ---------------------------
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
 
+        // 헤더는 displayCount 기준으로 생성 (headers 배열 길이가 이미 displayCount)
         for (let idx = 0; idx < displayCount; idx++) {
           const th = document.createElement('th');
 
@@ -327,6 +334,7 @@
 
         const tbody = document.createElement('tbody');
 
+        // 각 데이터 행은 originalData의 요소로, 컬럼 수는 displayCount와 일치해야 함
         tableData.forEach(row => {
           const tr = document.createElement('tr');
           const difficulty = parseFloat(row[difficultyColumnIndex]);
@@ -334,9 +342,11 @@
             tr.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
           }
 
+          // 안전하게 0..displayCount-1 까지 읽음
           for (let idx = 0; idx < displayCount; idx++) {
             const td = document.createElement('td');
             const cellValue = row[idx];
+            // 출력되는 마지막 열(=displayCount-1)에만 치환 적용
             if (idx === displayCount - 1) {
               td.textContent = replaceSpecialTermsForLastColumn(cellValue);
               td.classList.add("last-col"); // 마지막 열만 글꼴 적용
@@ -351,6 +361,11 @@
 
         table.appendChild(tbody);
       } else {
+        // ---------------------------
+        // 모바일: 각 아이템(한 행)을 2행으로 나누어 렌더링
+        // - gridCols = Math.ceil(displayCount / 2)
+        // - 마지막 표시되는 컬럼(=displayCount-1)에만 치환 적용
+        // ---------------------------
         const n = displayCount;
         const gridCols = Math.ceil(n / 2);
 
@@ -388,6 +403,7 @@
             const bottomIdx = j * 2 + 1;
 
             if (topIdx < n && bottomIdx < n) {
+              // 일반: top/bottom 둘 다 존재
               const tdTop = document.createElement('td');
               const tdBottom = document.createElement('td');
 
@@ -401,12 +417,14 @@
                 ? replaceSpecialTermsForLastColumn(bottomVal)
                 : bottomVal;
 
+              // 마지막 열만 글꼴 적용
               if (topIdx === n - 1) tdTop.classList.add("last-col");
               if (bottomIdx === n - 1) tdBottom.classList.add("last-col");
 
               trTop.appendChild(tdTop);
               trBottom.appendChild(tdBottom);
             } else if (topIdx < n && bottomIdx >= n) {
+              // 마지막 하나 남음 -> rowspan=2 로 합쳐서 표시
               const td = document.createElement('td');
               td.rowSpan = 2;
               const topVal = row[topIdx];
@@ -414,9 +432,11 @@
                 ? replaceSpecialTermsForLastColumn(topVal)
                 : topVal;
 
+              // 마지막 열만 글꼴 적용
               if (topIdx === n - 1) td.classList.add("last-col");
 
               trTop.appendChild(td);
+              // trBottom에는 해당 칸 추가하지 않음
             }
           }
 
@@ -428,6 +448,7 @@
       }
     }
 
+    // 이하 기존 정렬/필터/색상 로직은 변경하지 않음
     function updateSort(index) {
       const existing = sortState.find(s => s.index === index);
       if (!existing) {
