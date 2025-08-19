@@ -100,22 +100,21 @@
     /* 마지막 열 전용 스타일 */
     .last-col {
       font-family: sans-serif; /* 현재와 동일한 폰트 */
-      font-size: 0.85em;       /* 한 단계 작게 */
+      font-size: 0.75em;       /* 한 단계 작게 */
     }
   </style>
 </head>
 <body>
-  <h1>보유게임 리스트</h1>
+  <h1>B1 보드게임카페 부평구청점 보유게임 목록</h1>
   <div class="table-container">
     <table id="sheet-table"></table>
   </div>
 
   <script>
     const sheetId = '1F9Ho9alBcuP1_PoJletmulKCJqPCVm8SLTq61_uWJMM';
-    const gid = '0';
     const difficultyColumnIndex = 2;
 
-    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=${gid}`;
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=0`;
     let originalData = [];
     let tableData = [];
     let headers = [];
