@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>보유게임 리스트</title>
+  <link rel="icon" href="/images/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon-32x32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/images/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/icon-180x180.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#ffffff">
+  <title>B1 보드게임카페 부평구청점 보유게임 목록</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -90,6 +96,12 @@
         justify-content: space-between;
       }
     }
+
+    /* 마지막 열 전용 스타일 */
+    .last-col {
+      font-family: sans-serif; /* 현재와 동일한 폰트 */
+      font-size: 0.85em;       /* 한 단계 작게 */
+    }
   </style>
 </head>
 <body>
@@ -101,7 +113,7 @@
   <script>
     const sheetId = '1F9Ho9alBcuP1_PoJletmulKCJqPCVm8SLTq61_uWJMM';
     const gid = '0';
-    const difficultyColumnIndex = 3;
+    const difficultyColumnIndex = 2;
 
     const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=${gid}`;
     let originalData = [];
@@ -329,7 +341,8 @@
         "Worker Placement": "[일꾼놓기]",
         "Worker Placement with Dice Workers": "[일꾼놓기: 주사위로]",
         "Worker Placement, Different Worker Types": "[일꾼놓기: 각기 다른 종류]",
-        "Zone of Control": "[지역 컨트롤]"
+        "Zone of Control": "[지역 컨트롤]",
+        "Territory Building": "[영역 구축]"
       };
 
       // 긴 키부터 치환하도록 정렬 (부분 매칭 방지)
@@ -346,6 +359,9 @@
         const regex = new RegExp(pattern, 'gi');
         result = result.replace(regex, val + '\n'); // 줄바꿈 추가
       }
+
+      // 줄바꿈 이후 공백 제거
+      result = result.replace(/\n\s+/g, '\n');
 
       return result;
     }
@@ -508,6 +524,7 @@
             // 출력되는 마지막 열(=displayCount-1)에만 치환 적용
             if (idx === displayCount - 1) {
               td.textContent = replaceSpecialTermsForLastColumn(cellValue);
+              td.classList.add("last-col"); // 마지막 열만 글꼴 적용
             } else {
               td.textContent = cellValue;
             }
@@ -575,6 +592,10 @@
                 ? replaceSpecialTermsForLastColumn(bottomVal)
                 : bottomVal;
 
+              // 마지막 열만 글꼴 적용
+              if (topIdx === n - 1) tdTop.classList.add("last-col");
+              if (bottomIdx === n - 1) tdBottom.classList.add("last-col");
+
               trTop.appendChild(tdTop);
               trBottom.appendChild(tdBottom);
             } else if (topIdx < n && bottomIdx >= n) {
@@ -585,6 +606,10 @@
               td.textContent = (topIdx === n - 1)
                 ? replaceSpecialTermsForLastColumn(topVal)
                 : topVal;
+
+              // 마지막 열만 글꼴 적용
+              if (topIdx === n - 1) td.classList.add("last-col");
+
               trTop.appendChild(td);
               // trBottom에는 해당 칸 추가하지 않음
             }
