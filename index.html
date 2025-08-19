@@ -114,13 +114,39 @@
     const sheetId = '1F9Ho9alBcuP1_PoJletmulKCJqPCVm8SLTq61_uWJMM';
     const difficultyColumnIndex = 2;
 
+    // 원본 데이터 시트(gid=0)
     const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=0`;
+
+    // 🔁 치환 테이블 시트(gid=1) – A열: 키, B열: 값
+    const replaceUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=1`;
+
     let originalData = [];
     let tableData = [];
     let headers = [];
     let sortState = [];
     let filterValues = [];
 
+    // ✅ 기존 replacements 하드코딩 제거 → 구글 시트에서 불러와 생성
+    let replacements = {};
+    fetch(replaceUrl)
+      .then(res => res.text())
+      .then(text => {
+        const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\((.+)\)/)[1]);
+        const rows = json.table.rows || [];
+        const map = {};
+        rows.forEach(r => {
+          if (!r || !r.c) return;
+          const k = r.c[0]?.v;
+          const v = r.c[1]?.v;
+          if (k == null || v == null) return;
+          map[String(k).trim()] = String(v).trim();
+        });
+        replacements = map;
+        renderTable(); // 데이터가 이미 있을 경우 재렌더
+      })
+      .catch(err => console.error('치환표 불러오기 실패:', err));
+
+    // 원본 데이터 시트(gid=0) 불러오기
     fetch(url)
       .then(res => res.text())
       .then(text => {
@@ -130,7 +156,6 @@
         // 원본 스프레드시트의 마지막 열(=cols.length-1)은 제외하도록 columnCount를 설정한 기존 로직 유지
         const columnCount = cols.length - 1;
 
-        // headers 및 originalData는 이미 마지막 스프레드시트 열을 제외한 상태로 채워짐
         headers = cols.slice(0, columnCount).map(col => col.label);
         originalData = rows.map(row =>
           row.c.slice(0, columnCount).map(cell => cell?.v?.toString().replace(/\r?\n/g, '\n') || '-')
@@ -142,209 +167,14 @@
         renderTable();
       });
 
-    // --- 마지막으로 출력되는(=headers 기준 마지막) 열에만 적용할 치환 함수 (전체 변환표 포함) ---
+    // --- 마지막으로 출력되는(=headers 기준 마지막) 열에만 적용할 치환 함수 ---
     function replaceSpecialTermsForLastColumn(text) {
       if (text === null || text === undefined) return text;
-      // 앞뒤 불필요한 공백 제거, 내부 연속 공백 하나로 축소
+
+      // 앞뒤 공백 제거, 내부 연속 공백 하나로 축소
       let result = String(text).trim().replace(/\s+/g, ' ');
 
-      const replacements = {
-        "Acting": "[연기]",
-        "Action / Event": "[액션 / 이벤트]",
-        "Action Drafting": "[액션 드래프팅]",
-        "Action Points": "[액션 포인트]",
-        "Action Queue": "[액션 큐]",
-        "Action Retrieval": "[액션 회수]",
-        "Action Timer": "[액션 타이머]",
-        "Advantage Token": "[어드밴티지 토큰]",
-        "Alliances": "[동맹]",
-        "Area Majority / Influence": "[지역 주위 / 영향력]",
-        "Area Movement": "[지역 이동]",
-        "Area-Impulse": "[지역 턴]",
-        "Auction / Bidding": "[입찰 경매]",
-        "Auction Compensation": "[경매 보상]",
-        "Auction: Dexterity": "[민첩한 경매]",
-        "Auction: Dutch": "[네덜란드식 경매]",
-        "Auction: Dutch Priority": "[네덜란드 우선 경매]",
-        "Auction: English": "[미국식 경매]",
-        "Auction: Fixed Placement": "[고정 배치 경매]",
-        "Auction: Multiple Lot": "[동시 입찰 경매]",
-        "Auction: Once Around": "[한바퀴 경매]",
-        "Auction: Sealed Bid": "[비밀 경매]",
-        "Auction: Turn Order Until Pass": "[턴제 무한 경매]",
-        "Automatic Resource Growth": "[자원 성장]",
-        "Betting and Bluffing": "[베팅과 블러핑]",
-        "Bias": "[편향]",
-        "Bids As Wagers": "[입찰 베팅]",
-        "Bingo": "[빙고]",
-        "Bribery": "[뇌물]",
-        "Campaign / Battle Card Driven": "[캠페인/ 배틀카드 중심]",
-        "Card Play Conflict Resolution": "[카드 플레이로 충돌 해결]",
-        "Catch the Leader": "[리더잡기]",
-        "Chaining": "[체이닝]",
-        "Chit-Pull System": "[치트풀 시스템]",
-        "Closed Drafting": "[드래프팅]",
-        "Closed Economy Auction": "[폐쇄 경제형 경매]",
-        "Command Cards": "[명령 카드]",
-        "Commodity Speculation": "[상품 투기]",
-        "Communication Limits": "[제한된 커뮤니케이션]",
-        "Connections": "[연결]",
-        "Constrained Bidding": "[제한 입찰]",
-        "Contracts": "[계약 달성]",
-        "Cooperative Game": "[협력]",
-        "Crayon Rail System": "[크레용 레일 시스템]",
-        "Critical Hits and Failures": "[크리티컬 공격 또는 실패]",
-        "Cube Tower": "[큐브 타워]",
-        "Deck Construction": "[덱 건설]",
-        "Deck, Bag, and Pool Building": "[덱/백/풀 빌딩]",
-        "Deduction": "[소거법 추리]",
-        "Delayed Purchase": "[지연 구매]",
-        "Dice Rolling": "[주사위 굴림]",
-        "Die Icon Resolution": "[주사위 그림]",
-        "Different Dice Movement": "[다양한 주사위 이동]",
-        "Drawing": "[그리기]",
-        "Elapsed Real Time Ending": "[실제 시간 기반의 게임 종료]",
-        "Enclosure": "둘러싸기",
-        "End Game Bonuses": "[엔드 게임 보너스]",
-        "Events": "[이벤트]",
-        "Finale Ending": "[피날레 엔딩]",
-        "Flicking": "[플리킹]",
-        "Follow": "[따라하기]",
-        "Force Commitment": "[강제 적용]",
-        "Grid Coverage": "[그리드 범위]",
-        "Grid Movement": "[그리드 이동]",
-        "Hand Management": "[핸드 관리]",
-        "Hexagon Grid": "[육각 그리드]",
-        "Hidden Movement": "[비밀 이동]",
-        "Hidden Roles": "[숨겨진 역할]",
-        "Hidden Victory Points": "[숨겨진 승점]",
-        "Highest-Lowest Scoring": "[최고-최저 점수]",
-        "Hot Potato": "[뜨거운 감자]",
-        "I Cut, You Choose": "[내가 자르고, 네가 선택]",
-        "Impulse Movement": "[세부 움직임]",
-        "Income": "[수입]",
-        "Increase Value of Unchosen Resources": "[선택되지 않은 자원의 가치 증가]",
-        "Induction": "[규칙 찾기]",
-        "Interrupts": "[방해]",
-        "Investment": "[투자]",
-        "Kill Steal": "[킬 스틸]",
-        "King of the Hill": "[언덕의 왕]",
-        "Ladder Climbing": "[사다리타기]",
-        "Layering": "[레이어링]",
-        "Legacy Game": "[레거시]",
-        "Line Drawing": "[선 그리기]",
-        "Line of Sight": "[시야 선]",
-        "Loans": "[대출]",
-        "Lose a Turn": "[턴 잃기]",
-        "Mancala": "[만칼라]",
-        "Map Addition": "[추가되는 맵]",
-        "Map Deformation": "[지도 변형]",
-        "Map Reduction": "[맵 축소]",
-        "Market": "[시장]",
-        "Matching": "[매칭]",
-        "Measurement Movement": "[이동 측정]",
-        "Melding and Splaying": "[멜딩과 스플레잉]",
-        "Memory": "[기억]",
-        "Minimap Resolution": "[미니맵]",
-        "Modular Board": "[모듈러 보드]",
-        "Move Through Deck": "[덱 소진]",
-        "Movement Points": "[이동 포인트]",
-        "Movement Template": "[이동 템플릿]",
-        "Moving Multiple Units": "[여러 유닛 이동]",
-        "Multi-Use Cards": "[다용도 카드]",
-        "Multiple Maps": "[여러 지도]",
-        "Narrative Choice / Paragraph": "[서사 선택]",
-        "Negotiation": "[협상]",
-        "Neighbor Scope": "[이웃의 범위]",
-        "Network and Route Building": "[네트워크 및 경로 구축]",
-        "Once-Per-Game Abilities": "[1회용 능력]",
-        "Open Drafting": "[오픈 드래프팅]",
-        "Order Counters": "[주문 카운터]",
-        "Ordering": "[주문]",
-        "Ownership": "[소유권]",
-        "Paper-and-Pencil": "[종이와 연필]",
-        "Passed Action Token": "[액션 토큰 전달]",
-        "Pattern Building": "[패턴 구현]",
-        "Pattern Movement": "[패턴 이동]",
-        "Pattern Recognition": "[패턴 인식]",
-        "Physical Removal": "[물리적 제거]",
-        "Pick-up and Deliver": "[픽업과 배달]",
-        "Pieces as Map": "[지도로 사용하는 조각]",
-        "Player Elimination": "[플레이어 제거]",
-        "Player Judge": "[플레이어 심판]",
-        "Point to Point Movement": "[점 간 이동]",
-        "Predictive Bid": "[예측 입찰]",
-        "Prisoner's Dilemma": "[죄수의 딜레마]",
-        "Programmed Movement": "[프로그램된 이동]",
-        "Push Your Luck": "[운에 기대기]",
-        "Questions and Answers": "[질문과 답변]",
-        "Race": "[레이싱]",
-        "Random Production": "[무작위 생산]",
-        "Ratio / Combat Results Table": "[비율/전투 결과 표]",
-        "Re-rolling and Locking": "[재굴림과 잠금]",
-        "Real-Time": "실시간",
-        "Relative Movement": "[상대적 이동]",
-        "Resource Queue": "[자원 대기열]",
-        "Resource to Move": "[연료 자원]",
-        "Rock-Paper-Scissors": "[가위 바위 보]",
-        "Role Playing": "[롤 플레이]",
-        "Roles with Asymmetric Information": "[비대칭 정보가 있는 역할]",
-        "Roll / Spin and Move": "[롤/스핀 이동]",
-        "Rondel": "[론델]",
-        "Scenario / Mission / Campaign Game": "[시나리오/미션/캠페인]",
-        "Score-and-Reset Game": "[점수기록 및 재시작]",
-        "Secret Unit Deployment": "[비밀 유닛 배치]",
-        "Selection Order Bid": "[선택 주문 입찰]",
-        "Semi-Cooperative Game": "[반 협력]",
-        "Set Collection": "[셋 컬렉션]",
-        "Simulation": "[시뮬레이션]",
-        "Simultaneous Action Selection": "[동시 액션 선택]",
-        "Singing": "[노래부르기]",
-        "Single Loser Game": "[꼴등찾기]",
-        "Slide / Push": "[밀기]",
-        "Solo / Solitaire Game": "[싱글 플레이]",
-        "Speed Matching": "[속도 매칭]",
-        "Spelling": "[철자]",
-        "Square Grid": "[정사각 그리드]",
-        "Stacking and Balancing": "[쌓기와 밸런싱]",
-        "Stat Check Resolution": "[상태 확인]",
-        "Static Capture": "[정적 캡쳐]",
-        "Stock Holding": "[주식 보유]",
-        "Storytelling": "[스토리텔링]",
-        "Sudden Death Ending": "[서든 데스 엔딩]",
-        "Tags": "[태그]",
-        "Take That": "[이거나 먹어]",
-        "Targeted Clues": "[타겟 단서]",
-        "Team-Based Game": "[팀 기반]",
-        "Tech Trees / Tech Tracks": "[테크트리]",
-        "Three Dimensional Movement": "[3차원 이동]",
-        "Tile Placement": "[타일 놓기]",
-        "Track Movement": "[트랙 이동]",
-        "Trading": "[거래]",
-        "Traitor Game": "[배신자]",
-        "Trick-taking": "[트릭 테이킹]",
-        "Tug of War": "[줄다리기]",
-        "Turn Order: Auction": "[턴 순서:  경매]",
-        "Turn Order: Claim Action": "[턴 순서: 액션 수행]",
-        "Turn Order: Pass Order": "[턴 순서: 패스 순서]",
-        "Turn Order: Progressive": "[턴 순서: 진행순서]",
-        "Turn Order: Random": "[턴 순서: 무작위]",
-        "Turn Order: Role Order": "[턴 순서: 역할에 따라]",
-        "Turn Order: Stat-Based": "[턴 순서: 능력에 따라]",
-        "Turn Order: Time Track": "[턴 순서 : 시간에 따라]",
-        "Variable Phase Order": "[가변 페이즈 순서]",
-        "Variable Player Powers": "[가변 플레이어 파워]",
-        "Variable Set-up": "[변형된 게임준비]",
-        "Victory Points as a Resource": "[승점을 자원으로]",
-        "Voting": "[투표]",
-        "Worker Placement": "[일꾼놓기]",
-        "Worker Placement with Dice Workers": "[일꾼놓기: 주사위로]",
-        "Worker Placement, Different Worker Types": "[일꾼놓기: 각기 다른 종류]",
-        "Zone of Control": "[지역 컨트롤]",
-        "Territory Building": "[영역 구축]"
-      };
-
-      // 긴 키부터 치환하도록 정렬 (부분 매칭 방지)
+      // replacements 사용 (구글 시트에서 불러온 값)
       const keysSorted = Object.keys(replacements).sort((a, b) => b.length - a.length);
 
       function escapeRegex(str) {
@@ -353,19 +183,16 @@
 
       for (const key of keysSorted) {
         const val = replacements[key];
-        // 공백을 \s+로 매칭하도록 처리(키 내 공백이 유동적일 때도 매칭)
         const pattern = escapeRegex(key).replace(/ /g, '\\s+');
         const regex = new RegExp(pattern, 'gi');
-        result = result.replace(regex, val + '\n'); // 줄바꿈 추가
+        result = result.replace(regex, val + '\n');
       }
 
-      // 줄바꿈 이후 공백 제거
       result = result.replace(/\n\s+/g, '\n');
-
       return result;
     }
 
-    // 모바일 헤더용 컨트롤 생성 (기존 로직 유지)
+    // 이하 모든 렌더링/정렬/필터 로직은 원본 그대로 유지
     function createHeaderControl(index) {
       const wrapper = document.createElement('div');
       wrapper.className = 'header-control';
@@ -424,7 +251,6 @@
       return wrapper;
     }
 
-    // --- 테이블 렌더링 (데스크톱은 기존과 동일, 모바일은 2행 레이아웃) ---
     function renderTable() {
       const table = document.getElementById('sheet-table');
       table.innerHTML = '';
@@ -432,18 +258,12 @@
       const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       const isMobile = window.innerWidth < 768;
 
-      // headers와 originalData는 fetch시 이미 "스프레드시트의 마지막 열을 제외"한 상태로 들어오므로
-      // displayCount는 headers.length (출력할 실제 열 수)로 사용
-      const displayCount = headers.length; // 이 값이 출력되는 마지막 열의 인덱스는 displayCount - 1
+      const displayCount = headers.length;
 
       if (!isMobile) {
-        // ---------------------------
-        // 데스크톱: 기존 표 렌더링 (헤더/필터/정렬 모두 동일)
-        // ---------------------------
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
 
-        // 헤더는 displayCount 기준으로 생성 (headers 배열 길이가 이미 displayCount)
         for (let idx = 0; idx < displayCount; idx++) {
           const th = document.createElement('th');
 
@@ -508,7 +328,6 @@
 
         const tbody = document.createElement('tbody');
 
-        // 각 데이터 행은 originalData의 요소로, 컬럼 수는 displayCount와 일치해야 함
         tableData.forEach(row => {
           const tr = document.createElement('tr');
           const difficulty = parseFloat(row[difficultyColumnIndex]);
@@ -516,14 +335,12 @@
             tr.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
           }
 
-          // 안전하게 0..displayCount-1 까지 읽음
           for (let idx = 0; idx < displayCount; idx++) {
             const td = document.createElement('td');
             const cellValue = row[idx];
-            // 출력되는 마지막 열(=displayCount-1)에만 치환 적용
             if (idx === displayCount - 1) {
               td.textContent = replaceSpecialTermsForLastColumn(cellValue);
-              td.classList.add("last-col"); // 마지막 열만 글꼴 적용
+              td.classList.add("last-col");
             } else {
               td.textContent = cellValue;
             }
@@ -535,11 +352,6 @@
 
         table.appendChild(tbody);
       } else {
-        // ---------------------------
-        // 모바일: 각 아이템(한 행)을 2행으로 나누어 렌더링
-        // - gridCols = Math.ceil(displayCount / 2)
-        // - 마지막 표시되는 컬럼(=displayCount-1)에만 치환 적용
-        // ---------------------------
         const n = displayCount;
         const gridCols = Math.ceil(n / 2);
 
@@ -577,7 +389,6 @@
             const bottomIdx = j * 2 + 1;
 
             if (topIdx < n && bottomIdx < n) {
-              // 일반: top/bottom 둘 다 존재
               const tdTop = document.createElement('td');
               const tdBottom = document.createElement('td');
 
@@ -591,14 +402,12 @@
                 ? replaceSpecialTermsForLastColumn(bottomVal)
                 : bottomVal;
 
-              // 마지막 열만 글꼴 적용
               if (topIdx === n - 1) tdTop.classList.add("last-col");
               if (bottomIdx === n - 1) tdBottom.classList.add("last-col");
 
               trTop.appendChild(tdTop);
               trBottom.appendChild(tdBottom);
             } else if (topIdx < n && bottomIdx >= n) {
-              // 마지막 하나 남음 -> rowspan=2 로 합쳐서 표시
               const td = document.createElement('td');
               td.rowSpan = 2;
               const topVal = row[topIdx];
@@ -606,11 +415,9 @@
                 ? replaceSpecialTermsForLastColumn(topVal)
                 : topVal;
 
-              // 마지막 열만 글꼴 적용
               if (topIdx === n - 1) td.classList.add("last-col");
 
               trTop.appendChild(td);
-              // trBottom에는 해당 칸 추가하지 않음
             }
           }
 
@@ -622,7 +429,6 @@
       }
     }
 
-    // 이하 기존 정렬/필터/색상 로직은 변경하지 않음
     function updateSort(index) {
       const existing = sortState.find(s => s.index === index);
       if (!existing) {
