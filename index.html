@@ -468,9 +468,17 @@
 
     function applyFilter() {
       tableData = originalData.filter(row =>
-        filterValues.every((val, i) =>
-          row[i].toLowerCase().includes(val.toLowerCase())
-        )
+        row.every((cell, i) => {
+          let cellValue = cell;
+
+          // 마지막 열은 치환된 값 기준 검색
+          if (i === row.length - 1) {
+            cellValue = replaceSpecialTermsForLastColumn(cellValue) || '';
+          }
+
+          const filterVal = filterValues[i] || '';
+          return cellValue.toLowerCase().includes(filterVal.toLowerCase());
+        })
       );
     }
 
