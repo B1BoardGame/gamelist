@@ -17,7 +17,7 @@
 
     body {
       font-family: sans-serif;
-      padding: 0; /* ← 여백 제거 */
+      padding: 0;
       background: var(--background);
       color: var(--text);
     }
@@ -99,8 +99,8 @@
 
     /* 마지막 열 전용 스타일 */
     .last-col {
-      font-family: sans-serif; /* 현재와 동일한 폰트 */
-      font-size: 0.75em;       /* 한 단계 작게 */
+      font-family: sans-serif;
+      font-size: 0.75em;
     }
   </style>
 </head>
@@ -114,10 +114,7 @@
     const sheetId = '1F9Ho9alBcuP1_PoJletmulKCJqPCVm8SLTq61_uWJMM';
     const difficultyColumnIndex = 2;
 
-    // 원본 데이터 시트(gid=0)
     const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=0`;
-
-    // 🔁 치환 테이블 시트 – A열: 키, B열: 값
     const replaceUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=803160031`;
 
     let originalData = [];
@@ -126,7 +123,6 @@
     let sortState = [];
     let filterValues = [];
 
-    // ✅ 기존 replacements 하드코딩 제거 → 구글 시트에서 불러와 생성
     let replacements = {};
     fetch(replaceUrl)
       .then(res => res.text())
@@ -142,18 +138,15 @@
           map[String(k).trim()] = String(v).trim();
         });
         replacements = map;
-        renderTable(); // 데이터가 이미 있을 경우 재렌더
-      })
-      .catch(err => console.error('치환표 불러오기 실패:', err));
+        renderTable();
+      });
 
-    // 원본 데이터 시트(gid=0) 불러오기
     fetch(url)
       .then(res => res.text())
       .then(text => {
         const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\((.+)\)/)[1]);
         const rows = json.table.rows;
         const cols = json.table.cols;
-        // 원본 스프레드시트의 마지막 열(=cols.length-1)은 제외하도록 columnCount를 설정한 기존 로직 유지
         const columnCount = cols.length - 1;
 
         headers = cols.slice(0, columnCount).map(col => col.label);
@@ -167,32 +160,23 @@
         renderTable();
       });
 
-    // --- 마지막으로 출력되는(=headers 기준 마지막) 열에만 적용할 치환 함수 ---
     function replaceSpecialTermsForLastColumn(text) {
       if (text === null || text === undefined) return text;
-
-      // 앞뒤 공백 제거, 내부 연속 공백 하나로 축소
       let result = String(text).trim().replace(/\s+/g, ' ');
-
-      // replacements 사용 (구글 시트에서 불러온 값)
       const keysSorted = Object.keys(replacements).sort((a, b) => b.length - a.length);
-
       function escapeRegex(str) {
         return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       }
-
       for (const key of keysSorted) {
         const val = replacements[key];
         const pattern = escapeRegex(key).replace(/ /g, '\\s+');
         const regex = new RegExp(pattern, 'gi');
         result = result.replace(regex, val + '\n');
       }
-
       result = result.replace(/\n\s+/g, '\n');
       return result;
     }
 
-    // 이하 모든 렌더링/정렬/필터 로직은 원본 그대로 유지
     function createHeaderControl(index) {
       const wrapper = document.createElement('div');
       wrapper.className = 'header-control';
@@ -230,8 +214,8 @@
       input.value = filterValues[index] || '';
       input.placeholder = '검색';
 
-      // ✅ Android 대응: blur 시점에서만 필터 적용
-      input.addEventListener('blur', () => {
+      // ✅ 표준 input 이벤트 사용
+      input.addEventListener('input', () => {
         filterValues[index] = input.value;
         applyFilter();
         applySort();
@@ -249,7 +233,6 @@
 
       const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       const isMobile = window.innerWidth < 768;
-
       const displayCount = headers.length;
 
       if (!isMobile) {
@@ -258,7 +241,6 @@
 
         for (let idx = 0; idx < displayCount; idx++) {
           const th = document.createElement('th');
-
           const headerDiv = document.createElement('div');
           headerDiv.style.display = 'flex';
           headerDiv.style.alignItems = 'center';
@@ -294,8 +276,8 @@
           input.value = filterValues[idx] || '';
           input.placeholder = '검색';
 
-          // ✅ Android 대응: blur 시점에서만 필터 적용
-          input.addEventListener('blur', () => {
+          // ✅ 표준 input 이벤트 사용
+          input.addEventListener('input', () => {
             filterValues[idx] = input.value;
             applyFilter();
             applySort();
@@ -311,14 +293,12 @@
         table.appendChild(thead);
 
         const tbody = document.createElement('tbody');
-
         tableData.forEach(row => {
           const tr = document.createElement('tr');
           const difficulty = parseFloat(row[difficultyColumnIndex]);
           if (!isNaN(difficulty)) {
             tr.style.backgroundColor = hslColorFromDifficulty(difficulty, isDark);
           }
-
           for (let idx = 0; idx < displayCount; idx++) {
             const td = document.createElement('td');
             const cellValue = row[idx];
@@ -330,15 +310,12 @@
             }
             tr.appendChild(td);
           }
-
           tbody.appendChild(tr);
         });
-
         table.appendChild(tbody);
       } else {
         const n = displayCount;
         const gridCols = Math.ceil(n / 2);
-
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
 
@@ -357,7 +334,6 @@
         table.appendChild(thead);
 
         const tbody = document.createElement('tbody');
-
         tableData.forEach(row => {
           const trTop = document.createElement('tr');
           const trBottom = document.createElement('tr');
@@ -375,7 +351,6 @@
             if (topIdx < n && bottomIdx < n) {
               const tdTop = document.createElement('td');
               const tdBottom = document.createElement('td');
-
               const topVal = row[topIdx];
               const bottomVal = row[bottomIdx];
 
@@ -400,15 +375,12 @@
                 : topVal;
 
               if (topIdx === n - 1) td.classList.add("last-col");
-
               trTop.appendChild(td);
             }
           }
-
           tbody.appendChild(trTop);
           tbody.appendChild(trBottom);
         });
-
         table.appendChild(tbody);
       }
     }
@@ -450,17 +422,13 @@
       });
     }
 
-    // ✅ 수정된 applyFilter (치환 후 값 기준 검색)
     function applyFilter() {
       tableData = originalData.filter(row =>
         row.every((cell, i) => {
           let cellValue = cell;
-
-          // 마지막 열은 치환된 값 기준 검색
           if (i === row.length - 1) {
             cellValue = replaceSpecialTermsForLastColumn(cellValue) || '';
           }
-
           const filterVal = filterValues[i] || '';
           return cellValue.toLowerCase().includes(filterVal.toLowerCase());
         })
