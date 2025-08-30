@@ -214,8 +214,8 @@
       input.value = filterValues[index] || '';
       input.placeholder = '검색';
 
-      // ✅ 표준 input 이벤트 사용
-      input.addEventListener('input', () => {
+      // ✅ 포커스를 잃었을 때만 동작
+      input.addEventListener('blur', () => {
         filterValues[index] = input.value;
         applyFilter();
         applySort();
@@ -276,8 +276,8 @@
           input.value = filterValues[idx] || '';
           input.placeholder = '검색';
 
-          // ✅ 표준 input 이벤트 사용
-          input.addEventListener('input', () => {
+          // ✅ 포커스를 잃었을 때만 동작
+          input.addEventListener('blur', () => {
             filterValues[idx] = input.value;
             applyFilter();
             applySort();
