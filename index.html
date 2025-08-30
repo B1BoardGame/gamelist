@@ -230,15 +230,7 @@
       input.value = filterValues[index] || '';
       input.placeholder = '검색';
 
-      input.addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-          filterValues[index] = input.value;
-          applyFilter();
-          applySort();
-          renderTable();
-        }
-      });
-
+      // ✅ Android 대응: blur 시점에서만 필터 적용
       input.addEventListener('blur', () => {
         filterValues[index] = input.value;
         applyFilter();
@@ -302,15 +294,7 @@
           input.value = filterValues[idx] || '';
           input.placeholder = '검색';
 
-          input.addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-              filterValues[idx] = input.value;
-              applyFilter();
-              applySort();
-              renderTable();
-            }
-          });
-
+          // ✅ Android 대응: blur 시점에서만 필터 적용
           input.addEventListener('blur', () => {
             filterValues[idx] = input.value;
             applyFilter();
@@ -466,6 +450,7 @@
       });
     }
 
+    // ✅ 수정된 applyFilter (치환 후 값 기준 검색)
     function applyFilter() {
       tableData = originalData.filter(row =>
         row.every((cell, i) => {
