@@ -93,6 +93,10 @@
     let filterValues = [];
     let replacements = {};
 
+    // ✅ 추가: 리사이즈 상태 추적 (안드로이드 포커스 이슈 대응)
+    let lastIsMobile = window.innerWidth < 768;
+    let lastWidth = window.innerWidth;
+
     // 치환 데이터
     fetch(replaceUrl)
       .then(res => res.text())
@@ -269,6 +273,7 @@
       input.value = filterValues[index] || '';
       input.placeholder = '검색';
 
+      // blur/Enter에만 적용
       input.addEventListener('blur', () => {
         filterValues[index] = input.value;
         applyFilter();
@@ -410,9 +415,20 @@
       return `hsl(${h.toFixed(2)}, 100%, ${l}%)`;
     }
 
+    // ✅ 수정된 리사이즈 핸들러 (안드로이드 키보드 포커스 이슈 해결)
     window.addEventListener('resize', () => {
-      renderHeader();
-      renderContents();
+      const currentWidth = window.innerWidth;
+      const isMobile = currentWidth < 768;
+
+      if (isMobile !== lastIsMobile) {
+        lastIsMobile = isMobile;
+        renderHeader();     // 브레이크포인트 변화시에만 헤더 재렌더
+      }
+      if (currentWidth !== lastWidth) {
+        lastWidth = currentWidth;
+        renderContents();   // 가로 폭 변화시에만 본문 갱신
+      }
+      // 높이만 변한 경우(소프트키보드) → 아무 동작 안 함
     });
   </script>
 </body>
