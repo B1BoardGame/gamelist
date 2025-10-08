@@ -19,6 +19,14 @@
       color: var(--text);
     }
     h1 { text-align: center; }
+
+    /* ✅ 제목 아래 전체 폭 이미지 */
+    .full-width-image {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
     .table-container { overflow-x: auto; }
     table {
       border-collapse: collapse;
@@ -53,7 +61,6 @@
       font-size: 0.8em;
       margin-top: 4px;
     }
-    /* 모바일 전용 */
     @media (max-width: 768px) {
       table { min-width: unset; }
       th, td { font-size: 0.85em; }
@@ -76,6 +83,12 @@
 </head>
 <body>
   <h1>B1 보유게임 목록</h1>
+
+  <!-- ✅ 제목 아래 전체 폭 이미지 (클릭 시 새 창으로 원본 열기) -->
+  <a href="images/map.png" target="_blank" rel="noopener noreferrer">
+    <img src="images/map.png" alt="B1 보유게임 목록 관련 이미지" class="full-width-image">
+  </a>
+
   <div class="table-container">
     <table id="sheet-table"></table>
   </div>
@@ -93,11 +106,9 @@
     let filterValues = [];
     let replacements = {};
 
-    // ✅ 추가: 리사이즈 상태 추적 (안드로이드 포커스 이슈 대응)
     let lastIsMobile = window.innerWidth < 768;
     let lastWidth = window.innerWidth;
 
-    // 치환 데이터
     fetch(replaceUrl)
       .then(res => res.text())
       .then(text => {
@@ -115,7 +126,6 @@
         renderContents();
       });
 
-    // 시트 데이터
     fetch(url)
       .then(res => res.text())
       .then(text => {
@@ -136,7 +146,6 @@
         renderContents();
       });
 
-    // 마지막 열 치환
     function replaceSpecialTermsForLastColumn(text) {
       if (text === null || text === undefined) return text;
       let result = String(text).trim().replace(/\s+/g, ' ');
@@ -153,7 +162,6 @@
       return result.replace(/\n\s+/g, '\n');
     }
 
-    // 헤더 렌더링
     function renderHeader() {
       const table = document.getElementById('sheet-table');
       const oldThead = table.querySelector('thead');
@@ -185,7 +193,6 @@
       table.appendChild(thead);
     }
 
-    // 데스크톱용 헤더 셀
     function createHeaderCell(idx) {
       const th = document.createElement('th');
       const headerDiv = document.createElement('div');
@@ -223,7 +230,6 @@
       return th;
     }
 
-    // 모바일용 헤더 컨트롤
     function createHeaderControl(index) {
       const wrapper = document.createElement('div');
       wrapper.className = 'header-control';
@@ -261,19 +267,13 @@
       return wrapper;
     }
 
-    // 필터 입력창 생성 (재사용)
     function createFilterInput(index) {
-      const existing = document.querySelector(`.filter-input[data-idx="${index}"]`);
-      if (existing) return existing;
-
       const input = document.createElement('input');
       input.type = 'text';
       input.className = 'filter-input';
       input.dataset.idx = index;
       input.value = filterValues[index] || '';
       input.placeholder = '검색';
-
-      // blur/Enter에만 적용
       input.addEventListener('blur', () => {
         filterValues[index] = input.value;
         applyFilter();
@@ -288,11 +288,9 @@
           renderContents();
         }
       });
-
       return input;
     }
 
-    // 본문 렌더링
     function renderContents() {
       const table = document.getElementById('sheet-table');
       const oldTbody = table.querySelector('tbody');
@@ -358,7 +356,6 @@
       table.appendChild(tbody);
     }
 
-    // 정렬
     function updateSort(index) {
       const existing = sortState.find(s => s.index === index);
       if (!existing) {
@@ -368,11 +365,13 @@
         sortState = [existing, ...sortState.filter(s => s.index !== index)];
       }
     }
+
     function getSortSymbol(index) {
       const state = sortState.find(s => s.index === index);
       if (!state) return '↕';
       return state.direction === 'asc' ? '▲' : '▼';
     }
+
     function applySort() {
       tableData.sort((a, b) => {
         for (const { index, direction } of sortState) {
@@ -391,7 +390,6 @@
       });
     }
 
-    // 필터
     function applyFilter() {
       tableData = originalData.filter(row =>
         row.every((cell, i) => {
@@ -405,7 +403,6 @@
       );
     }
 
-    // 난이도 색상
     function hslColorFromDifficulty(value, isDark) {
       const min = 1, max = 5;
       const t = (value - min) / (max - min);
@@ -415,20 +412,18 @@
       return `hsl(${h.toFixed(2)}, 100%, ${l}%)`;
     }
 
-    // ✅ 수정된 리사이즈 핸들러 (안드로이드 키보드 포커스 이슈 해결)
     window.addEventListener('resize', () => {
       const currentWidth = window.innerWidth;
       const isMobile = currentWidth < 768;
 
       if (isMobile !== lastIsMobile) {
         lastIsMobile = isMobile;
-        renderHeader();     // 브레이크포인트 변화시에만 헤더 재렌더
+        renderHeader();
       }
       if (currentWidth !== lastWidth) {
         lastWidth = currentWidth;
-        renderContents();   // 가로 폭 변화시에만 본문 갱신
+        renderContents();
       }
-      // 높이만 변한 경우(소프트키보드) → 아무 동작 안 함
     });
   </script>
 </body>
