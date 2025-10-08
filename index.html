@@ -84,7 +84,7 @@
 <body>
   <h1>B1 보유게임 목록</h1>
 
-  <!-- ✅ 제목 아래 전체 폭 이미지 (클릭 시 새 창으로 원본 열기) -->
+  <!-- ✅ 제목 아래 전체 폭 이미지 -->
   <a href="images/map.png" target="_blank" rel="noopener noreferrer">
     <img src="images/map.png" alt="B1 보유게임 목록 관련 이미지" class="full-width-image">
   </a>
@@ -291,6 +291,7 @@
       return input;
     }
 
+    /* ✅ 변경된 부분: renderContents() 내부에 5번째 열 처리 추가 */
     function renderContents() {
       const table = document.getElementById('sheet-table');
       const oldTbody = table.querySelector('tbody');
@@ -309,10 +310,18 @@
           }
           row.forEach((cell, idx) => {
             const td = document.createElement('td');
-            td.textContent = (idx === headers.length - 1)
-              ? replaceSpecialTermsForLastColumn(cell)
-              : cell;
-            if (idx === headers.length - 1) td.classList.add("last-col");
+
+            // ✅ 5번째 열(인덱스 4)인 경우 숫자면 "분" 추가
+            if (idx === 4) {
+              const num = parseFloat(cell);
+              td.textContent = !isNaN(num) ? `${num}분` : cell;
+            } else if (idx === headers.length - 1) {
+              td.textContent = replaceSpecialTermsForLastColumn(cell);
+              td.classList.add("last-col");
+            } else {
+              td.textContent = cell;
+            }
+
             tr.appendChild(td);
           });
           tbody.appendChild(tr);
@@ -331,11 +340,23 @@
           for (let j = 0; j < gridCols; j++) {
             const topIdx = j * 2;
             const bottomIdx = j * 2 + 1;
+
+            function formatCell(idx) {
+              if (idx === 4) {
+                const num = parseFloat(row[idx]);
+                return !isNaN(num) ? `${num}분` : row[idx];
+              } else if (idx === n - 1) {
+                return replaceSpecialTermsForLastColumn(row[idx]);
+              } else {
+                return row[idx];
+              }
+            }
+
             if (topIdx < n && bottomIdx < n) {
               const tdTop = document.createElement('td');
               const tdBottom = document.createElement('td');
-              tdTop.textContent = (topIdx === n - 1) ? replaceSpecialTermsForLastColumn(row[topIdx]) : row[topIdx];
-              tdBottom.textContent = (bottomIdx === n - 1) ? replaceSpecialTermsForLastColumn(row[bottomIdx]) : row[bottomIdx];
+              tdTop.textContent = formatCell(topIdx);
+              tdBottom.textContent = formatCell(bottomIdx);
               if (topIdx === n - 1) tdTop.classList.add("last-col");
               if (bottomIdx === n - 1) tdBottom.classList.add("last-col");
               trTop.appendChild(tdTop);
@@ -343,7 +364,7 @@
             } else if (topIdx < n) {
               const td = document.createElement('td');
               td.rowSpan = 2;
-              td.textContent = (topIdx === n - 1) ? replaceSpecialTermsForLastColumn(row[topIdx]) : row[topIdx];
+              td.textContent = formatCell(topIdx);
               if (topIdx === n - 1) td.classList.add("last-col");
               trTop.appendChild(td);
             }
