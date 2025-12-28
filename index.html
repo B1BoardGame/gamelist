@@ -138,10 +138,10 @@
         headers = cols.slice(0, columnCount).map(col => col.label);
         originalData = rows.map(row =>
           row.c.slice(0, columnCount).map(cell => {
-            if (!cell || cell.v === null || cell.v === undefined || cell.v === '') {
+            if (!cell || cell.f === null || cell.f === undefined || cell.f === '') {
               return '-';
             }
-            return String(cell.v).replace(/\r?\n/g, '\n');
+            return String(cell.f).replace(/\r?\n/g, '\n');
           })
         );
 
