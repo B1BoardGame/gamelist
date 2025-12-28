@@ -312,6 +312,10 @@
             const td = document.createElement('td');
 
             // ✅ 5번째 열(인덱스 4)인 경우 숫자면 "분" 추가
+            if (idx >= 1 && idx <= 5) {
+              td.style.textAlign = 'center';
+            }
+
             if (idx === 4) {
               const num = parseFloat(cell);
               td.textContent = !isNaN(num) ? `${num}분` : cell;
@@ -357,6 +361,8 @@
               const tdBottom = document.createElement('td');
               tdTop.textContent = formatCell(topIdx);
               tdBottom.textContent = formatCell(bottomIdx);
+              if (topIdx >= 1 && topIdx <= 5) tdTop.style.textAlign = 'center';
+              if (bottomIdx >= 1 && bottomIdx <= 5) tdBottom.style.textAlign = 'center';
               if (topIdx === n - 1) tdTop.classList.add("last-col");
               if (bottomIdx === n - 1) tdBottom.classList.add("last-col");
               trTop.appendChild(tdTop);
@@ -365,6 +371,7 @@
               const td = document.createElement('td');
               td.rowSpan = 2;
               td.textContent = formatCell(topIdx);
+              if (topIdx >= 1 && topIdx <= 5) td.style.textAlign = 'center';
               if (topIdx === n - 1) td.classList.add("last-col");
               trTop.appendChild(td);
             }
