@@ -137,7 +137,12 @@
 
         headers = cols.slice(0, columnCount).map(col => col.label);
         originalData = rows.map(row =>
-          row.c.slice(0, columnCount).map(cell => cell?.v?.toString().replace(/\r?\n/g, '\n') || '-')
+          row.c.slice(0, columnCount).map(cell => {
+            if (!cell || cell.v === null || cell.v === undefined || cell.v === '') {
+              return '-';
+            }
+            return String(cell.v).replace(/\r?\n/g, '\n');
+          })
         );
 
         filterValues = new Array(headers.length).fill('');
