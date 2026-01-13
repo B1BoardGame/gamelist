@@ -3,12 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="B1 보유게임 목록">
   <link rel="icon" href="/images/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/icon-32x32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/images/icon-192x192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/icon-180x180.png">
   <link rel="manifest" href="/site.webmanifest">
-  <meta name="theme-color" content="#ffffff">
   <title>B1 보드게임카페 부평구청점 보유게임 목록</title>
   <style>
     :root { color-scheme: light dark; }
@@ -286,6 +289,7 @@
           applyFilter();
           applySort();
           renderContents();
+          input.blur();
         }
       });
       return input;
